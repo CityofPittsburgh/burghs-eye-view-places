@@ -1,4 +1,4 @@
-# Burgh's Eye View Public
+# Burgh's Eye View Places
 # Organization: City of Pittsburgh
 # Dept: Innovation & Performance
 # Team: Analytics & Strategy
@@ -43,18 +43,6 @@ getWidth <- '$(document).on("shiny:connected", function(e) {
   Shiny.onInputChange("GetScreenWidth",jsWidth);
 });'
 
-changePage <- "
-function changePage(event) {
-    if($(event.target).hasClass('external')) {
-      window.location.href = $(event.target).attr('href');
-      return;
-    }
-    //...
-}
-$(function () {
-$('.nav li').click( changePage );
-}"
-
 # Make it work when Downloading stuff
 httr::set_config(config(ssl_verifypeer = 0L))
 
@@ -75,42 +63,6 @@ ckan <- function(id) {
 # City Boundary
 city.boundary <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/a99f25fffb7b41c8a4adf9ea676a3a0b_0.geojson", what = "sp")
 
-# Load Special Regions
-# Load Greenways
-greenways <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/dcef4d943c1b44129b967d97def9e8c4_0.geojson", what = "sp")
-greenways$layer <- "Greenway"
-greenways@data <- subset(greenways@data, select = c(name, layer))
-# Load Flood Zones
-floodzones <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/fb45ed8f9e0d463aadfab95620ffa303_0.geojson", what = "sp")
-floodzones$name <- NA
-floodzones$layer <- "Flood Zone"
-floodzones@data <- subset(floodzones@data, select = c(name, layer))
-# Load Landslide Prone
-landslide <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/c5b8bed5963746d4844dcfea7c2053e7_0.geojson", what = "sp")
-landslide$name <- NA
-landslide$layer <- "Landslide Prone"
-landslide@data <- subset(landslide@data, select = c(name, layer))
-# Load URA Main St
-mainst <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/ab9b192ab4ba46d88144bacf5a0252e0_0.geojson", what = "sp", disambiguateFIDs= TRUE)
-mainst$name <- as.character(mainst$name)
-mainst$name <- ifelse(mainst$name == "", NA, mainst$name)
-mainst$layer <- "URA Main St"
-mainst@data <- subset(mainst@data, select = c(name, layer))
-# Load Undermined Areas
-undermined <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/a065e686e9144110ac6ccfe7bb43fd98_0.geojson", what = "sp")
-undermined$layer <- "Undermined Area"
-undermined$name <- NA
-undermined@data <- subset(undermined@data, select = c(name, layer))
-# Load Historic Districts
-histdist <-  geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/71df883dcf184292b69d5721df39b5dd_0.geojson", what = "sp")
-histdist$layer <- "Historic District"
-histdist$name <- histdist$NAME
-histdist@data <- subset(histdist@data, select = c(name, layer))
-
-# Merge & Clean Regions
-load.regions <- rbind(greenways, floodzones, landslide, mainst, undermined, histdist, makeUniqueIDs = TRUE)  
-load.regions$layer <- as.factor(load.regions$layer)
-
 # Load facilities
 load.facilities_images <- ckan("07bf416f-9df2-4d70-b48d-682f608f9a6b")
 attr(load.facilities_images, "spec") <- NULL
@@ -126,12 +78,66 @@ load.facilities@data$facility_type <- ifelse(load.facilities@data$name =="Martin
 load.facilities@data$facility_type <- as.factor(load.facilities@data$facility_type)
 # Clean Facility Type for humans
 load.facilities@data <- transform(load.facilities@data, usage = as.factor(mapvalues(facility_type, c("ACTIVITY", "CABIN", "COMMUNITY", "CONCESSION", "DUGOUT", "FIREHOUSE" , "MEDIC STATION", "OFFICE", "POLICE", "POOL", "POOL CLOSED", "POOL/REC", "REC", "RECYCLING", "RESTROOMS", "SALT DOME", "SENIOR", "SERVICE", "SHELTER", "STORAGE", "TRAINING", "UTILITY", "VACANT", NA),
-                                                                          c("Activity", "Cabin", "Community", "Concession", "Dugout", "Firehouse", "Medic Station", "Office", "Police", "Pool", "Pool - Closed", "Pool/Recreation", "Recreation", "Recycling", "Restrooms", "Salt Dome", "Senior Center", "Service", "Shelter", "Storage", "Training", "Utility", "Vacant", "Storage"))))
+                                                                                    c("Activity", "Cabin", "Community", "Concession", "Dugout", "Firehouse", "Medic Station", "Office", "Police", "Pool", "Pool - Closed", "Pool/Recreation", "Recreation", "Recycling", "Restrooms", "Salt Dome", "Senior Center", "Service", "Shelter", "Storage", "Training", "Utility", "Vacant", "Storage"))))
 # Create Tooltip
 load.facilities@data$rentable <- as.factor(load.facilities@data$rentable)
 load.facilities@data$url <- ifelse(load.facilities@data$rentable == "True", '<br><center><a href="https://registerparks.pittsburghpa.gov/" target="_blank">Rent this facility</a></center>', "")
 
 load.facilities <- load.facilities[load.facilities$inactive == "False",]
+
+load.recfacilities <- load.facilities[load.facilities@data$usage %in%  c("Recreation", "Pool/Recreation"),]
+load.pools <- load.facilities[load.facilities@data$usage %in%  c("Pool", "Pool - Closed"),]
+
+load.facilities <- load.facilities[!load.facilities@data$usage %in%  c("Recreation", "Pool/Recreation", "Pool", "Pool - Closed"),]
+load.facilities@data$usage <- as.character(load.facilities@data$usage)
+load.facilities@data$usage <- as.factor(load.facilities@data$usage)
+
+# Load Recreation
+# Load Greenways
+load.greenways <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/dcef4d943c1b44129b967d97def9e8c4_0.geojson", what = "sp")
+load.greenways@data$layer <- "Greenway"
+load.greenways@data <- subset(load.greenways@data, select = c(name, layer))
+
+# Load Environmental 
+# Load Flood Zones
+floodzones <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/fb45ed8f9e0d463aadfab95620ffa303_0.geojson", what = "sp")
+floodzones$name <- NA
+floodzones$layer <- "Flood Zone"
+floodzones@data <- subset(floodzones@data, select = c(name, layer))
+
+# Load Landslide Prone
+landslide <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/c5b8bed5963746d4844dcfea7c2053e7_0.geojson", what = "sp")
+landslide$name <- NA
+landslide$layer <- "Landslide Prone"
+landslide@data <- subset(landslide@data, select = c(name, layer))
+
+# Load Undermined Areas
+undermined <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/a065e686e9144110ac6ccfe7bb43fd98_0.geojson", what = "sp")
+undermined$layer <- "Undermined Area"
+undermined$name <- NA
+undermined@data <- subset(undermined@data, select = c(name, layer))
+
+# Merge & Clean Environmental 
+load.environmental <- rbind(floodzones, landslide, undermined, makeUniqueIDs = TRUE)  
+load.environmental@data$layer <- as.factor(load.environmental@data$layer)
+
+# Load Economic
+# Load URA Main St
+mainst <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/ab9b192ab4ba46d88144bacf5a0252e0_0.geojson", what = "sp", disambiguateFIDs= TRUE)
+mainst$name <- as.character(mainst$name)
+mainst$name <- ifelse(mainst$name == "", NA, mainst$name)
+mainst$layer <- "URA Main St"
+mainst@data <- subset(mainst@data, select = c(name, layer))
+
+# Load Historic Districts
+histdist <-  geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/71df883dcf184292b69d5721df39b5dd_0.geojson", what = "sp")
+histdist$layer <- "Historic District"
+histdist$name <- histdist$NAME
+histdist@data <- subset(histdist@data, select = c(name, layer))
+
+# Merge & Clean Economic
+load.economic <- rbind(mainst, histdist, makeUniqueIDs = TRUE)  
+load.economic@data$layer <- as.factor(load.economic@data$layer)
 
 # Load Water Features
 load.wf <- ckan("1b74a658-0465-456a-929e-ff4057220274")
@@ -230,17 +236,18 @@ icons_egg <- iconList(
 )
 
 # UI for application
-ui <- navbarPage(id = "mapPage",
+ui <- navbarPage(id = "navTab",
                  windowTitle = "Burgh's Eye View", 
+                 selected = "Places",
                  collapsible = TRUE,
                  fluid = TRUE,
                  theme = shinytheme("flatly"),
                  title = HTML('<img src="burghs_eyeview_logo_small.png" alt="Burghs Eye View" height="85%">'),
                  position = "static-top",
-                 tabPanel('Places', id = "Places", value = "Places",
+                 tabPanel(a("Points", href="https://pittsburghpa.shinyapps.io/BurghsEyeView/", style = "padding-top: 0px; padding-bottom: 0px; bottom: 19; top: -19; bottom: 19px")),
+                 tabPanel('Places', id = "Places", value = "Places", 
                           # Run script to determine if user is loading from a mobile device
                           tags$script(getWidth),
-                          tags$script(changePage),
                           # Google Tag Manager Script to Head
                           tags$head(includeScript("tag-manager-head.js")),
                           # Set favicon
@@ -281,12 +288,14 @@ ui <- navbarPage(id = "mapPage",
                                      }"),
                           uiOutput("placesPanel")
                  ),
+                 
+                 tabPanel(a("Parcels", href="https://pittsburghpa.shinyapps.io/parcel_viewer/", style = "padding-top: 0px; padding-bottom: 0px; bottom: 19; top: -19; bottom: 19px")),
                  tabPanel('Data', id = "Data", value = "Data",
                           # Select Dataset for Export
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("City Facilities", "City Steps", "Water Features", "Traffic Signals", "Special Regions"), # Parks & Playgrounds, Bridges
+                                        choices = c("City Facilities", "City Steps", "Water Features", "Traffic Signals", "Environmental"), # Parks & Playgrounds, Bridges
                                         selected= "City Facilities"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -297,8 +306,7 @@ ui <- navbarPage(id = "mapPage",
                           tags$style(type = "text/css", ".dataTables_filter {margin-right: 5px;}"),
                           dataTableOutput("report.table")
                  ),
-                 tabPanel(a("Points", href="https://pittsburghpa.shinyapps.io/BurghsEyeView/", style = "padding-top: 0px;
-    padding-bottom: 0px; bottom: 19; top: -19; bottom: 19px")),
+                 
                  tabPanel('About', class = "About", value = "About",
                           includeHTML('about.html'),
                           # Twitter Button
@@ -330,6 +338,7 @@ ui <- navbarPage(id = "mapPage",
 
 # Define server
 server <- shinyServer(function(input, output, session) {
+  setBookmarkExclude("GetScreenWidth")
   observe({
     # Trigger this observer every time an input changes
     reactiveValuesToList(input)
@@ -385,7 +394,7 @@ server <- shinyServer(function(input, output, session) {
                                 label= NULL,
                                 c(`Rentable` = '', levels(load.facilities$rentable)),
                                 selectize = TRUE),
-                    HTML('<font color="#a65628">'),
+                    HTML('<font color="#f781bf">'),
                     checkboxInput("toggleSteps",
                                   label = "City Steps",
                                   value = TRUE),
@@ -422,13 +431,23 @@ server <- shinyServer(function(input, output, session) {
                                 multiple = TRUE,
                                 selectize = TRUE),
                     HTML('<font color="#984ea3">'),
-                    checkboxInput("toggleRegions",
-                                  label = "Special Regions",
+                    checkboxInput("toggleEconomic",
+                                  label = "Economic",
                                   value = FALSE),
                     HTML('</font>'),
-                    selectInput("region_select",
+                    selectInput("district_select",
                                 label = NULL,
-                                c(`Region Type` ='', levels(load.regions$layer)),
+                                c(`Distric Type` ='', levels(load.economic$layer)),
+                                multiple = TRUE,
+                                selectize = TRUE),
+                    HTML('<font color="#a65628">'),
+                    checkboxInput("toggleEnvironmental",
+                                  label = "Environmental",
+                                  value = FALSE),
+                    HTML('</font>'),
+                    selectInput("environmental_select",
+                                label = NULL,
+                                c(`Region Type` ='', levels(load.environmental$layer)),
                                 multiple = TRUE,
                                 selectize = TRUE)
           ), style = "opacity: 0.88"
@@ -476,7 +495,7 @@ server <- shinyServer(function(input, output, session) {
                                             label= NULL,
                                             c(`Rentable` = '', levels(load.facilities$rentable)),
                                             selectize = TRUE),
-                                HTML('<font color="#a65628">'),
+                                HTML('<font color="#f781bf">'),
                                 checkboxInput("toggleSteps",
                                               label = "City Steps",
                                               value = TRUE),
@@ -513,13 +532,23 @@ server <- shinyServer(function(input, output, session) {
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 HTML('<font color="#984ea3">'),
-                                checkboxInput("toggleRegions",
-                                              label = "Special Regions",
+                                checkboxInput("toggleEconomic",
+                                              label = "Economic",
                                               value = FALSE),
                                 HTML('</font>'),
-                                selectInput("region_select",
+                                selectInput("district_select",
                                             label = NULL,
-                                            c(`Region Type` ='', levels(load.regions$layer)),
+                                            c(`Distric Type` ='', levels(load.economic$layer)),
+                                            multiple = TRUE,
+                                            selectize = TRUE),
+                                HTML('<font color="#984ea3">'),
+                                checkboxInput("toggleEnvironmental",
+                                              label = "Environmental",
+                                              value = FALSE),
+                                HTML('</font>'),
+                                selectInput("environmental_select",
+                                            label = NULL,
+                                            c(`Region Type` ='', levels(load.environmental$layer)),
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 HTML('</div>')
@@ -589,20 +618,53 @@ server <- shinyServer(function(input, output, session) {
     
     return(steps)
   })
-  regionsInput <- reactive({
-    regions <- load.regions
+  recfacilitiesInput <- reactive({
+    recfacilities <- load.recfacilities
+  })
+  greenwaysInput <- reactive({
+    greenways <- load.greenways
     
     # Usage Filter
-    if (length(input$region_select) > 0) {
-      regions <- regions[regions$layer %in% input$region_select,]
+    if (length(input$recreation_select) > 0) {
+      greenways <- greenways[greenways@data$layer %in% input$recreation_select,]
     }
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      regions <- regions[apply(regions@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      greenways <- greenways[apply(greenways@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
-    return(regions)
+    return(greenways)
+  })
+  economicInput <- reactive({
+    economic <- load.economic
+    
+    # Usage Filter
+    if (length(input$environmental_select) > 0) {
+      economic <- economic[economic@data$layer %in% input$district_select,]
+    }
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      economic <- economic[apply(economic@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(economic)
+  })
+  environmentalInput <- reactive({
+    environmental <- load.environmental
+    
+    # Usage Filter
+    if (length(input$environmental_select) > 0) {
+      environmental <- environmental[environmental@data$layer %in% input$environmental_select,]
+    }
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      environmental <- environmental[apply(environmental@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(environmental)
   })
   # City Facilities data with filters
   facilitiesInput <- reactive({
@@ -636,12 +698,11 @@ server <- shinyServer(function(input, output, session) {
       colnames(facilities) <- c("Usage", "Description", "Dept", "Location", "Neighborhood", "Council", "Public Works Division", "Police Zone")
       
       report <- facilities
-    }
+    } 
     return(report)
   })
   downloadInput <- reactive({
     report <- reportInput()
-    
     # Report Table Search Filter
     if (!is.null(input$report.table_search) && input$report.table_search != "") {
       report <- report[apply(report, 1, function(row){any(grepl(input$report.table_search, row, ignore.case = TRUE))}), ]
@@ -665,7 +726,6 @@ server <- shinyServer(function(input, output, session) {
   # Build City Map
   output$map <- renderLeaflet({
     assetsCount <- 0
-    if (Sys.Date() == as.Date(paste0(this_year,"-07-06")) | Sys.Date() == as.Date(paste0(this_year,"-08-31"))) {
       map <- leaflet() %>% 
         addProviderTiles("Thunderforest.Pioneer",
                          options = providerTileOptions(noWrap = TRUE), group = "Pioneer") %>%
@@ -739,7 +799,7 @@ server <- shinyServer(function(input, output, session) {
       assetsCount <- assetsCount + 1
       steps <- stepsInput()
       if (nrow(steps) > 0) {
-        map <- addPolylines(map, data=steps, color = "#a65628",
+        map <- addPolylines(map, data=steps, color = "#f781bf",
                                 popup = ~(paste("<font color='black'><b>Location:</b>", steps$cartegraph_id,
                                                 ifelse(is.na(steps$num_steps_1) | steps$num_steps_1 == 0, "<br><b>Steps:</b> Uncounted", paste("<br><b>Steps:</b>", steps$num_steps_1)),
                                                 ifelse(is.na(steps$year_1) | steps$year_1 == 0, "<br><b>Year:</b> Unknown", paste("<br><b>Year:</b>", steps$year_1)),
@@ -747,13 +807,24 @@ server <- shinyServer(function(input, output, session) {
         )
       }
     }
-    if (input$toggleRegions) {
-      regions <- regionsInput()
-      if (nrow(regions) > 0) {
+    if (input$toggleEconomic) {
+      economic <- economicInput()
+      if (nrow(economic) > 0) {
         assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=regions, color = "#984ea3", fillColor = "#984ea3", fillOpacity = .5,
-                                 popup = ~(paste("<font color='black'><b>Region:</b>", regions$layer,
-                                                 ifelse(is.na(regions$name), "", paste("<br><b>Name:</b>", regions$name)),
+        map <- addPolygons(map, data=economic, color = "#984ea3", fillColor = "#984ea3", fillOpacity = .5,
+                           popup = ~(paste("<font color='black'><b>Region:</b>", economic$layer,
+                                           ifelse(is.na(economic$name), "", paste("<br><b>Name:</b>", economic$name)),
+                                           '</font>'))
+        )
+      }
+    }
+    if (input$toggleEnvironmental) {
+      environmental <- environmentalInput()
+      if (nrow(environmental) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=environmental, color = "#a65628", fillColor = "#984ea3", fillOpacity = .5,
+                                 popup = ~(paste("<font color='black'><b>Region:</b>", environmental$layer,
+                                                 ifelse(is.na(environmental$name), "", paste("<br><b>Name:</b>", environmental$name)),
                                                  '</font>'))
         )
       }
