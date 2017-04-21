@@ -449,7 +449,11 @@ server <- shinyServer(function(input, output, session) {
                                 label = NULL,
                                 c(`Region Type` ='', levels(load.environmental$layer)),
                                 multiple = TRUE,
-                                selectize = TRUE)
+                                selectize = TRUE),
+                    selectInput("basemap_select",
+                                label = "Basemap",
+                                choices = c(`OSM Mapnik` = "OpenStreetMap.Mapnik", `OSM France` = "OpenStreetMap.France", `OSM Humanitarian` = "OpenStreetMap.HOT", `Esri Satellite` = "Esri.WorldImagery", `Stamen Toner` = "Stamen.Toner", Esri = "Esri.WorldStreetMap", Pioneer = "Thunderforest.Pioneer"),
+                                selected = ifelse(Sys.Date() == as.Date(paste0(this_year,"-07-06")) | Sys.Date() == as.Date(paste0(this_year,"-08-31")), "Thunderforest.Pioneer", "OpenStreetMap.Mapnik"))
           ), style = "opacity: 0.88"
         )
       )
@@ -551,6 +555,10 @@ server <- shinyServer(function(input, output, session) {
                                             c(`Region Type` ='', levels(load.environmental$layer)),
                                             multiple = TRUE,
                                             selectize = TRUE),
+                                selectInput("basemap_select",
+                                            label = "Basemap",
+                                            choices = c(`OSM Mapnik` = "OpenStreetMap.Mapnik", `OSM France` = "OpenStreetMap.France", `OSM Humanitarian` = "OpenStreetMap.HOT", `Esri Satellite` = "Esri.WorldImagery", `Stamen Toner` = "Stamen.Toner", Esri = "Esri.WorldStreetMap", Pioneer = "Thunderforest.Pioneer"),
+                                            selected = ifelse(Sys.Date() == as.Date(paste0(this_year,"-07-06")) | Sys.Date() == as.Date(paste0(this_year,"-08-31")), "Thunderforest.Pioneer", "OpenStreetMap.Mapnik")),
                                 HTML('</div>')
                       ),
                       # Generate Map
@@ -727,35 +735,13 @@ server <- shinyServer(function(input, output, session) {
   output$map <- renderLeaflet({
     assetsCount <- 0
       map <- leaflet() %>% 
-        addProviderTiles("Thunderforest.Pioneer",
-                         options = providerTileOptions(noWrap = TRUE), group = "Pioneer") %>%
-        addProviderTiles("OpenStreetMap.HOT",
-                         options = providerTileOptions(noWrap = TRUE), group = "Huamitarian (OSM)") %>%
-        addTiles(options = providerTileOptions(noWrap = TRUE), group = "Mapnik (OSM)") %>%
-        addProviderTiles("OpenStreetMap.France",
-                         options = providerTileOptions(noWrap = TRUE), group = "France (OSM)") %>%
-        addLayersControl(
-          baseGroups = c("Pioneer", "Mapnik (OSM)", "Huamitarian (OSM)", "France (OSM)")) %>%
+        addProviderTiles(input$basemap_select,
+                         options = providerTileOptions(noWrap = TRUE)) %>%
         addEasyButton(easyButton(
           icon="fa-crosshairs", title="Locate Me",
           onClick=JS("function(btn, map){ map.locate({setView: true}); }"))) %>%
         addPolygons(data = city.boundary, stroke = TRUE, smoothFactor = 0, weight = 2, color = "#000000", opacity = 0.6,
                     fill = TRUE, fillColor = "#00FFFFFF", fillOpacity = 0)
-    } else {
-      map <- leaflet() %>% 
-        addProviderTiles("OpenStreetMap.HOT",
-                         options = providerTileOptions(noWrap = TRUE), group = "Huamitarian (OSM)") %>%
-        addTiles(options = providerTileOptions(noWrap = TRUE), group = "Mapnik (OSM)") %>%
-        addProviderTiles("OpenStreetMap.France",
-                         options = providerTileOptions(noWrap = TRUE), group = "France (OSM)") %>%
-        addLayersControl(
-          baseGroups = c("Mapnik (OSM)", "Huamitarian (OSM)", "France (OSM)")) %>%
-        addEasyButton(easyButton(
-          icon="fa-crosshairs", title="Locate Me",
-          onClick=JS("function(btn, map){ map.locate({setView: true}); }"))) %>%
-        addPolygons(data = city.boundary, stroke = TRUE, smoothFactor = 0, weight = 2, color = "#000000", opacity = 0.6,
-                    fill = TRUE, fillColor = "#00FFFFFF", fillOpacity = 0)
-    }
     # City Places Layer
     if (input$toggleFacilities) {
       facilities <- facilitiesInput()
