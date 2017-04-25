@@ -23,6 +23,7 @@ library(htmltools)
 library(htmlwidgets)
 library(rgeos)
 library(geojsonio)
+library(rgdal)
 
 # Data Transform
 library(plyr)
@@ -100,9 +101,13 @@ load.recfacilities@data$usage <- as.factor(load.recfacilities@data$usage)
 load.poolsfacilities <- load.facilities[load.facilities@data$usage %in%  c("Pool", "Pool - Closed"),]
 load.poolsfacilities@data$usage <- as.factor(load.poolsfacilities@data$usage)
 
+# Remove Stuff
 load.facilities <- load.facilities[!load.facilities@data$usage %in%  c("Activity", "Recreation", "Dugout", "Pool/Recreation", "Pool", "Pool - Closed"),]
 load.facilities@data$usage <- as.character(load.facilities@data$usage)
 load.facilities@data$usage <- as.factor(load.facilities@data$usage)
+
+# Load Bridges
+load.bridges <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/514cda59-5448-4a30-8d03-d56dd8d5320b/download/bridges.geojson")
 
 # Load Recreation
 # Load Greenways
@@ -111,7 +116,15 @@ load.greenways@data$layer <- "Greenway"
 load.greenways@data$name <- toTitleCase(tolower(load.greenways@data$name))
 load.greenways@data <- subset(load.greenways@data, select = c(name, layer))
 
-# Load
+# Load Courts
+load.courts <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/2d892e85-e3b6-4afd-ab60-2f9257e25930/download/courts.geojson")
+
+# Load Playing Fields
+load.fields <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/5b11db03-80aa-4146-abe3-160a3bb75e24/download/fields.geojson")
+load.fields@data$LightsField <- ifelse(load.fields@data$LightsField == 0, FALSE, TRUE)
+# Load Playgrounds
+load.playgrounds <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/2c79a4e1-d412-4e6a-bd4a-43d6ba0a8cd7/download/playgrounds.geojson")
+load.playgrounds@data$layer <- "Playground"
 
 # Load Environmental 
 # Load Flood Zones
@@ -160,15 +173,15 @@ load.wf <- ckan("1b74a658-0465-456a-929e-ff4057220274")
 # Remove Inactive Water Features
 load.wf <- subset(load.wf, inactive == "False")
 # Prepare for Merge to Facilities
-load.wf <- transform(load.wf, feature_type = as.factor(mapvalues(feature_type, c("Spray", "Decorative", "Drinking Fountain"), c("Spray Park", "Decorative Water Fountain", "Drinking Fountain"))))
+load.wf <- transform(load.wf, feature_type = as.factor(mapvalues(feature_type, c("Spray", "Decorative", "Drinking Fountain"), c("Spray Fountain", "Decorative Water Fountain", "Drinking Fountain"))))
 load.wf$feature_type <- as.character(load.wf$feature_type)
 
 # Load Spray
-load.spray <- subset(load.wf, feature_type == "Spray Park")
+load.spray <- subset(load.wf, feature_type == "Spray Fountain")
 load.spray$feature_type <- as.factor(load.spray$feature_type)
 
 # Remove Spray
-load.wf <- subset(load.wf, feature_type != "Spray Park")
+load.wf <- subset(load.wf, feature_type != "Spray Fountain")
 load.wf$feature_type <- as.factor(load.wf$feature_type)
 
 # Load Pools
@@ -264,7 +277,7 @@ icons_egg <- iconList(
 
 # UI for application
 ui <- navbarPage(id = "navTab",
-                 windowTitle = "Burgh's Eye View", 
+                 windowTitle = "Burgh's Eye View Places", 
                  selected = "Places",
                  collapsible = TRUE,
                  fluid = TRUE,
@@ -272,7 +285,7 @@ ui <- navbarPage(id = "navTab",
                  title = HTML('<img src="burghs_eyeview_logo_small.png" alt="Burghs Eye View" height="85%">'),
                  position = "static-top",
                  tabPanel(a("Points", href="https://pittsburghpa.shinyapps.io/BurghsEyeView/", style = "padding-top: 0px; padding-bottom: 0px; bottom: 19; top: -19; bottom: 19px")),
-                 tabPanel('Places', id = "Places", value = "Places", 
+                 tabPanel('Places', id = "Places", value = "Places", class = "Places",
                           # Run script to determine if user is loading from a mobile device
                           tags$script(getWidth),
                           # Google Tag Manager Script to Head
@@ -322,7 +335,7 @@ ui <- navbarPage(id = "navTab",
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("City Assets", "City Steps", "Water Features", "Traffic Signals", "Environmental"), # Parks & Playgrounds, Bridges
+                                        choices = c("City Assets", "City Bridges", "City Steps", "Courts", "Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals"),
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -393,7 +406,7 @@ server <- shinyServer(function(input, output, session) {
         # Map size for Desktop CSS
         tags$style(type = "text/css", "#map {height: calc(100vh - 60px) !important;}"),
         # Add background image
-        tags$head(tags$style(type="text/css", '#Places {
+        tags$head(tags$style(type="text/css", '.Places {
                              background-image: url("loading.png");
                              background-repeat: no-repeat;
                              background-position: center;
@@ -421,6 +434,11 @@ server <- shinyServer(function(input, output, session) {
                                 label= NULL,
                                 c(`Rentable` = '', levels(load.facilities$rentable)),
                                 selectize = TRUE),
+                    HTML('<font color="#D4AF37">'),
+                    checkboxInput("toggleBridges",
+                                  label = "City Bridges",
+                                  value = TRUE),
+                    HTML('</font>'),
                     HTML('<font color="#4daf4a">'),
                     checkboxInput("toggleRecreation",
                                   label= "Recreation",
@@ -428,7 +446,7 @@ server <- shinyServer(function(input, output, session) {
                     HTML('</font>'),
                     selectInput("recreation_select",
                                 label= NULL,
-                                c(`Recreation Type` = '', sort(c("Greenway", levels(load.recfacilities@data$usage)))),
+                                c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts$CourtTypeField), levels(load.fields$FieldUsageField), levels(load.recfacilities@data$usage), "Playground"))),
                                 multiple = TRUE,
                                 selectize = TRUE),
                     HTML('<font color="#f781bf">'),
@@ -442,13 +460,6 @@ server <- shinyServer(function(input, output, session) {
                                 max = max(load.steps$LinearFeetAmountField, na.rm = TRUE),
                                 value = c(min(load.steps$LinearFeetAmountField, na.rm = TRUE), max(load.steps$LinearFeetAmountField, na.rm = TRUE)),
                                 step = 1),
-                    sliderInput("year_select",
-                                label = "Installed Year",
-                                min = min(load.steps$InstalledYear, na.rm = TRUE),
-                                max = max(load.steps$InstalledYear, na.rm = TRUE),
-                                value = c(min(load.steps$InstalledYear, na.rm = TRUE),max(load.steps$InstalledYear, na.rm = TRUE)),
-                                sep = "",
-                                step = 1),
                     HTML('<font color="#377eb8">'),
                     checkboxInput("togglePools",
                                   label = "Pools & Spray Parks",
@@ -457,21 +468,6 @@ server <- shinyServer(function(input, output, session) {
                     selectInput("water_select",
                                 label = NULL,
                                 c(`Water Category`='', sort(unique(c(levels(load.pools$PoolTypeField) ,levels(load.poolsfacilities@data$usage), levels(load.spray$feature_type))))),
-                                multiple = TRUE,
-                                selectize = TRUE),
-                    HTML('<font color="#e41a1c">'),
-                    checkboxInput("toggleTraffic",
-                                  label = "Traffic Lights",
-                                  value = TRUE),
-                    HTML('</font>'),
-                    selectInput("operation_select",
-                                label = NULL,
-                                c(`Operation Type` ='', levels(load.si$operation_type)),
-                                multiple = TRUE,
-                                selectize = TRUE),
-                    selectInput("flash_select",
-                                label = NULL,
-                                c(`Flash Time` ='', levels(load.si$flash_time)),
                                 multiple = TRUE,
                                 selectize = TRUE),
                     HTML('<font color="#984ea3">'),
@@ -492,6 +488,20 @@ server <- shinyServer(function(input, output, session) {
                     selectInput("environmental_select",
                                 label = NULL,
                                 c(`Region Type` ='', levels(load.environmental$layer)),
+                                multiple = TRUE,
+                                selectize = TRUE),
+                    HTML('<font color="#e41a1c">'),
+                    checkboxInput("toggleTraffic",
+                                  value = FALSE),
+                    HTML('</font>'),
+                    selectInput("operation_select",
+                                label = NULL,
+                                c(`Operation Type` ='', levels(load.si$operation_type)),
+                                multiple = TRUE,
+                                selectize = TRUE),
+                    selectInput("flash_select",
+                                label = NULL,
+                                c(`Flash Time` ='', levels(load.si$flash_time)),
                                 multiple = TRUE,
                                 selectize = TRUE),
                     selectInput("basemap_select",
@@ -536,13 +546,18 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('</font>'),
                                 selectInput("usage_select",
                                             label = NULL,
-                                            c(`Asset Usage`='', sort( c(levels(load.wf$feature_type), levels(load.facilities$usage)))),
+                                            c(`Asset Usage`='', sort(c(levels(load.wf$feature_type), levels(load.facilities$usage)))),
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 selectInput("rentable_select",
                                             label= NULL,
                                             c(`Rentable` = '', levels(load.facilities$rentable)),
                                             selectize = TRUE),
+                                HTML('<font color="#D4AF37">'),
+                                checkboxInput("toggleBridges",
+                                              label = "City Bridges",
+                                              value = TRUE),
+                                HTML('</font>'),
                                 HTML('<font color="#4daf4a">'),
                                 checkboxInput("toggleRecreation",
                                               label= "Recreation",
@@ -550,7 +565,7 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('</font>'),
                                 selectInput("recreation_select",
                                             label= NULL,
-                                            c(`Recreation Type` = '', sort(c("Greenway", levels(load.recfacilities$layer)))),
+                                            c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts@data$CourtTypeField), levels(load.fields@data$FieldUsageField), levels(load.recfacilities@data$usage), "Playground"))),
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 HTML('<font color="#f781bf">'),
@@ -559,17 +574,10 @@ server <- shinyServer(function(input, output, session) {
                                               value = TRUE),
                                 HTML('</font>'),
                                 sliderInput("ft_select",
-                                            label = "Steps",
+                                            label = "Step length (ft)",
                                             min = min(load.steps$LinearFeetAmountField, na.rm = TRUE),
                                             max = max(load.steps$LinearFeetAmountField, na.rm = TRUE),
-                                            value = c(min(load.steps$LinearFeetAmountField, na.rm = TRUE),max(load.steps$LinearFeetAmountField, na.rm = TRUE)),
-                                            step = 1),
-                                sliderInput("year_select",
-                                            label = "Installed Year",
-                                            min = min(load.steps$InstalledYear, na.rm = TRUE),
-                                            max = max(load.steps$InstalledYear, na.rm = TRUE),
-                                            value = c(min(load.steps$InstalledYear, na.rm = TRUE),max(load.steps$InstalledYear, na.rm = TRUE)),
-                                            sep = "",
+                                            value = c(min(load.steps$LinearFeetAmountField, na.rm = TRUE), max(load.steps$LinearFeetAmountField, na.rm = TRUE)),
                                             step = 1),
                                 HTML('<font color="#377eb8">'),
                                 checkboxInput("togglePools",
@@ -578,22 +586,7 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('</font>'),
                                 selectInput("water_select",
                                             label = NULL,
-                                            sort(unique(c(levels(load.pools$PoolTypeField) ,levels(load.poolsfacilities@data$usage), levels(load.spray$feature_type)))),
-                                            multiple = TRUE,
-                                            selectize = TRUE),
-                                HTML('<font color="#e41a1c">'),
-                                checkboxInput("toggleTraffic",
-                                              label = "Traffic Lights",
-                                              value = TRUE),
-                                HTML('</font>'),
-                                selectInput("operation_select",
-                                            label = NULL,
-                                            c(`Operation Type` ='', levels(load.si$operation_type)),
-                                            multiple = TRUE,
-                                            selectize = TRUE),
-                                selectInput("flash_select",
-                                            label = NULL,
-                                            c(`Flash Time` ='', levels(load.si$flash_time)),
+                                            c(`Water Category`='', sort(unique(c(levels(load.pools$PoolTypeField) ,levels(load.poolsfacilities@data$usage), levels(load.spray$feature_type))))),
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 HTML('<font color="#984ea3">'),
@@ -606,7 +599,7 @@ server <- shinyServer(function(input, output, session) {
                                             c(`Distric Type` ='', levels(load.economic$layer)),
                                             multiple = TRUE,
                                             selectize = TRUE),
-                                HTML('<font color="#984ea3">'),
+                                HTML('<font color="#a65628">'),
                                 checkboxInput("toggleEnvironmental",
                                               label = "Environmental",
                                               value = FALSE),
@@ -614,6 +607,20 @@ server <- shinyServer(function(input, output, session) {
                                 selectInput("environmental_select",
                                             label = NULL,
                                             c(`Region Type` ='', levels(load.environmental$layer)),
+                                            multiple = TRUE,
+                                            selectize = TRUE),
+                                HTML('<font color="#e41a1c">'),
+                                checkboxInput("toggleTraffic",
+                                              value = FALSE),
+                                HTML('</font>'),
+                                selectInput("operation_select",
+                                            label = NULL,
+                                            c(`Operation Type` ='', levels(load.si$operation_type)),
+                                            multiple = TRUE,
+                                            selectize = TRUE),
+                                selectInput("flash_select",
+                                            label = NULL,
+                                            c(`Flash Time` ='', levels(load.si$flash_time)),
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 selectInput("basemap_select",
@@ -628,8 +635,8 @@ server <- shinyServer(function(input, output, session) {
                           left: 0px;
                           top: 55px;", leafletOutput("map")),
                       # Set map to style for Mobile
-                      tags$style(type = "text/css", ".assetsBack {height: calc(100vh - 115px) !important;}"),
-                      tags$head(tags$style(type="text/css", '#assetsBack {
+                      tags$style(type = "text/css", "#map {height: calc(100vh - 115px) !important;}"),
+                      tags$head(tags$style(type="text/css", '.assetsBack {
                                            background-image: url("loading.png");
                                            background-repeat: no-repeat;
                                            background-position: center;
@@ -689,21 +696,31 @@ server <- shinyServer(function(input, output, session) {
     
     return(si)
   })
+  
   # City Steps data with filters
   stepsInput <- reactive({
     steps <- load.steps
     
-    #Step Filter
-    steps <- subset(steps, LinearFeetAmountField <= input$ft_select[1] & LinearFeetAmountField >= input$ft_select[2] | is.na(LinearFeetAmountField))
-    # Year Filter
-    steps <- subset(steps, InstalledYear <= input$year_select[1] & InstalledYear >= input$year_select[2] | is.na(InstalledYear))
-    
+    # Step Filter
+    steps <- subset(steps, LinearFeetAmountField >= input$ft_select[1] & LinearFeetAmountField <= input$ft_select[2] | is.na(LinearFeetAmountField))
+
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
       steps <- steps[apply(steps@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(steps)
+  })
+  # Bridges data with Filters
+  bridgesInput <- reactive({
+    bridges <- load.bridges
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      bridges <- steps[apply(bridges@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(bridges)
   })
   poolsInput <- reactive({
     pools <- load.pools
@@ -773,6 +790,51 @@ server <- shinyServer(function(input, output, session) {
     
     return(greenways)
   })
+  courtsInput <- reactive({
+    courts <- load.courts
+    
+    # Usage Filter
+    if (length(input$recreation_select) > 0) {
+      courts <- courts[courts@data$CourtTypeField %in% input$recreation_select,]
+    }
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      courts <- courts[apply(courts@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(courts)
+  })
+  fieldsInput <- reactive({
+    fields <- load.fields
+    
+    # Usage Filter
+    if (length(input$recreation_select) > 0) {
+      fields <- fields[fields@data$FieldUsageField %in% input$recreation_select,]
+    }
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      fields <- fields[apply(fields@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(fields)
+  })
+  playgroundsInput <- reactive({
+    playgrounds <- load.playgrounds
+    
+    # Usage Filter
+    if (length(input$recreation_select) > 0) {
+      playgrounds <- playgrounds[playgrounds@data$layer %in% input$recreation_select,]
+    }
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      playgrounds <- playgrounds[apply(playgrounds@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(playgrounds)
+  })
   economicInput <- reactive({
     economic <- load.economic
     
@@ -828,14 +890,88 @@ server <- shinyServer(function(input, output, session) {
   reportInput <- reactive({
     if (input$report_select == "City Assets") {
       facilities <- facilitiesInput()
-      facilities <- facilities@data
+      wf <- wfInput()
       
-      facilities <- subset(facilities, select = c(usage, name, primary_user, address, neighborhood, council_district, public_works_division, police_zone))
-      
+      facilities <- subset(facilities@data, select = c(usage, name, primary_user, address, neighborhood, council_district, public_works_division, police_zone))
       colnames(facilities) <- c("Usage", "Description", "Dept", "Location", "Neighborhood", "Council", "Public Works Division", "Police Zone")
       
-      report <- facilities
-    } 
+      wf$Dept <- "DEPARTMENT OF PUBLIC WORKS"
+      wf$Location <- NA
+      wf <- subset(wf, select = c(feature_type, name,  Dept, Location, neighborhood, council_district, public_works_division, police_zone))
+      colnames(wf) <- c("Usage", "Description", "Dept", "Location", "Neighborhood", "Council", "Public Works Division", "Police Zone")
+      
+      report <- rbind(facilities, wf)
+    } else if (input$report_select == "Recreation Facilities") {
+      recfacilities <- recfacilitiesInput()
+      
+      recfacilities <- subset(recfacilities@data, select = c(usage, name, primary_user, address, neighborhood, council_district, public_works_division, police_zone))
+      colnames(recfacilities) <- c("Usage", "Description", "Dept", "Location", "Neighborhood", "Council", "Public Works Division", "Police Zone")
+      
+      report <- recfacilities
+    } else if (input$report_select == "City Bridges") {
+      bridges <- bridgesInput()
+      
+      bridges <- subset(bridges@data, select = c(IDField, NeighborhoodField, Neighborhood2Field))
+      colnames(bridges) <- c("Name", "Neighborhood1", "Neighborhood2")
+      
+      report <- bridges
+    } else if (input$report_select == "City Steps") {
+      steps <- stepsInput()
+      
+      steps <- subset(steps@data, select = c(IDField, CouncilDistrictField, MaintenanceResponsibilityField, StepMaterialField, LinearFeetAmountField, InstalledYear))
+      colnames(steps) <- c("Name", "Council", "Public Works Division", "Step Material", "Length (feet)")
+      
+      report <- steps
+    } else if (input$report_select == "Playgrounds") {
+      playgrounds <- playgroundsInput()
+      
+      playgrounds <- subset(playgrounds@data, select = c(IDField, CouncilDistrictField, MaintenanceResponsibilityField, ParkField, StreetField))
+      colnames(playgrounds) <- c("Name", "Council", "Public Works Division", "Park", "Street")
+      
+      report <- playgrounds
+    } else if (input$report_select == "Courts") {
+      courts <- courtsInput()
+      
+      courts <- subset(courts@data, select = c(IDField, CourtTypeField, CourtSurfaceMaterialField, GrandstandField, ParkField, LocationDescriptionField))
+      colnames(courts) <- c("Name", "Court Type", "Surface Material", "Grandstands", "Park", "Location Description")
+      
+      report <- courts
+    } else if (input$report_select == "Playing Fields") {
+      fields <- fieldsInput()
+      
+      fields <- subset(fields@data, select = c(IDField, FieldUsageField, GoalPostField, InfieldTypeField, LightsField, LeftFieldDistanceField, CenterFieldDistanceField, RightFieldDistanceField, ParkField))
+      colnames(fields) <- c("Name", "Field Type", "Goal Posts", "Infield", "Left Field", "Center Field", "Right Field", "Lights", "Park")
+      
+      report <- fields
+    } else if (input$report_select == "Pools & Spray Parks") {
+      pools <- poolsInput()
+      poolsfacilities <- poolsfacilitiesInput()
+      spray <- sprayInput()
+      
+      pools <- subset(pools@data, select =  c(IDField, NeighborhoodField, PoolTypeField, WaterSourceField, PoolCapacityGalField))
+      
+      spray <- subset(spray, select =  c(name, neighborhood, feature_type))
+      colnames(spray) <- c("IDField", "NeighborhoodField", "PoolTypeField")
+      spray$WaterSourceField <- NA
+      spray$PoolCapacityGalField <- NA
+      
+      poolsfacilities <- subset(poolsfacilities@data, select = c(name, neighborhood, usage))
+      colnames(poolsfacilities) <- c("IDField", "NeighborhoodField", "PoolTypeField")
+      poolsfacilities$WaterSourceField <- NA
+      poolsfacilities$PoolCapacityGalField <- NA
+      
+      pools_spray <- rbind(spray, pools, poolsfacilities)
+      colnames(pools_spray) <- c("Name", "Neighborhood", "Type", "Water Source", "Capacity (gal)")
+      
+      report <- pools_spray
+    } else if (input$report_select == "Traffic Signals") {
+      si <- siInput()
+
+      si <- subset(si, select = c(description, operation_type, flash_time, flash_yellow, neighborhood, council_district, public_works_division, police_zone))
+      colnames(si) <- c("Location", "Operation Type", "Flash Time", "Flash Yellow", "Neighborhood", "Council", "Public Works Division", "Police Zone")
+      
+      report <- si
+    }
     return(report)
   })
   downloadInput <- reactive({
@@ -871,19 +1007,6 @@ server <- shinyServer(function(input, output, session) {
           onClick=JS("function(btn, map){ map.locate({setView: true}); }"))) %>%
         addPolygons(data = city.boundary, stroke = TRUE, smoothFactor = 0, weight = 2, color = "#000000", opacity = 0.6,
                     fill = TRUE, fillColor = "#00FFFFFF", fillOpacity = 0)
-    # City Places Layer
-    if (input$toggleAssets) {
-      facilities <- facilitiesInput()
-      if (nrow(facilities) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=facilities, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5,
-                           popup = ~(paste(paste0('<center><img id="imgPicture" src="', facilities$image_url,'" style="width:250px;"></center>'),
-                                          "<font color='black'><b>Name:</b>", facilities$name,
-                                          "<br><b>Location:</b>", facilities$address,
-                                          "<br><b>Usage:</b>", facilities$usage,
-                                          "<br><b>Dept:</b>", facilities$primary_user,
-                                          facilities$url, "</font>"))
-        )
       }
       wf <- wfInput()
       if (nrow(wf) > 0) {
@@ -965,18 +1088,7 @@ server <- shinyServer(function(input, output, session) {
                                            '</font>'))
         )
       }
-    }
-    if (input$toggleRecreation) {
-      greenways <- greenwaysInput()
       recfacilities <- recfacilitiesInput()
-      if (nrow(greenways) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=greenways, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                           popup = ~(paste("<font color='black'><b>Type:</b>", greenways$layer,
-                                           ifelse(is.na(greenways$name), "", paste("<br><b>Name:</b>", greenways$name)),
-                                           '</font>'))
-                           )
-      }
       if (nrow(recfacilities) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolygons(map, data=recfacilities, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
@@ -988,27 +1100,149 @@ server <- shinyServer(function(input, output, session) {
                                            recfacilities$url, "</font>"))
         )
       }
-    }
-    if (input$toggleEnvironmental) {
-      environmental <- environmentalInput()
-      if (nrow(environmental) > 0) {
+      courts <- courtsInput()
+      if(nrow(courts) > 0) {
         assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=environmental, color = "#a65628", fillColor = "#a65628", fillOpacity = .5,
-                                 popup = ~(paste("<font color='black'><b>Region:</b>", environmental$layer,
-                                                 ifelse(is.na(environmental$name), "", paste("<br><b>Name:</b>", environmental$name)),
-                                                 '</font>'))
+        map <- addPolygons(map, data=courts, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+                           popup = ~(paste("<font color='black'><b>Name:</b>", courts$IDField,
+                                           "<br><b>Location:</b>", courts$ParkField,
+                                           "<br><b>Type:</b>", courts$CourtTypeField,
+                                           "<br><b>Surface Material:</b>", courts$CourtSurfaceMaterialField, 
+                                           "<br><b>Grandstands:</b>", courts$GrandstandField, "</font>"))
         )
       }
-    }
-    if (assetsCount < 1) {
-      if (Sys.Date() >= as.Date(paste0(this_year,"-11-01")) & Sys.Date() <= as.Date(paste0(this_year,"-11-08"))) {
-        egg <- load.egg
-      } else {
-        egg <- load.egg[sample(1:nrow(load.egg),1),]
+      fields <- fieldsInput()
+      if (nrow(fields) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=fields, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+                           popup = ~(paste("<font color='black'><b>Name:</b>", fields$IDField,
+                                           "<br><b>Location:</b>", fields$ParkField,
+                                           "<br><b>Type:</b>", fields$FieldUsageField,
+                                           ifelse(fields$InfieldTypeField == "N/A", "", paste("<br><b>Infield Type:</b>", fields$InfieldTypeField)),
+                                           "<br><b>Lights:</b>", fields$LightsField,
+                                           ifelse(fields$GoalPostField == 0, "", paste("<br><b>Goal Posts:</b>", fields$GoalPostField)),
+                                           ifelse(fields$LeftFieldDistanceField == "N/A", "", paste("<br><b>Left Field:</b>", fields$LeftFieldDistanceField, "ft")),
+                                           ifelse(fields$CenterFieldDistanceField == "N/A", "", paste("<br><b>Center Field:</b>", fields$CenterFieldDistanceField, "ft")),
+                                           ifelse(fields$RightFieldDistanceField == "N/A", "", paste("<br><b>Right Field:</b>", fields$RightFieldDistanceField, "ft")), "</font>"))
+          )
+        }
+        playgrounds <- playgroundsInput()
+        if (nrow(playgrounds) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addPolygons(map, data=playgrounds, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+                             popup = ~(paste("<font color='black'><b>Name:</b>", playgrounds$IDField,
+                                             "<br><b>Location:</b>", playgrounds$StreetField,
+                                             "<br><b>Park:</b>", playgrounds$ParkField, "</font>"
+                             ))
+          )
+        }
       }
-      map <- addMarkers(map, data=egg, ~X, ~Y, icon = ~icons_egg[icon], popup = ~tt) %>% 
-        setView(-79.9959, 40.4406, zoom = 10)
-    }
+      # Pool Layers
+      if (input$togglePools) {
+        pools <- poolsInput()
+          if (nrow(pools) > 0) {
+            assetsCount <- assetsCount + 1
+            map <- addPolygons(map, data=pools, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
+                               popup = ~(paste("<font color='black'><b>Name:</b>", pools$IDField,
+                                               "<br><b>Usage:</b>", pools$PoolTypeField,
+                                               "<br><b>Water Source:</b>", pools$WaterSourceField,
+                                               ifelse(is.na(pools$PoolCapacityGalField), "", paste("<br><b>Capacity:</b>", prettyNum(pools$PoolCapacityGalField, big.mark = ","),"gal")), "</font>"))
+            )
+          }
+          spray <- sprayInput()
+          if (nrow(spray) > 0) {
+            assetsCount <- assetsCount + 1
+            map <- addCircleMarkers(map, data=spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 4,
+                                    popup = ~(paste("<font color='black'><b>Location:</b>", spray$name,
+                                                    "<br><b>Usage:</b>", spray$feature_type,
+                                                    ifelse(is.na(spray$make), "", paste("<br><b>Make:</b>", spray$make)),
+                                                    ifelse(is.na(spray$control_type), "", paste("<br><b>Control:</b>", spray$control_type)),"</font>"))
+            )
+          }
+          poolsfacilities <- poolsfacilitiesInput()
+          if (nrow(poolsfacilities) > 0 ) {
+            assetsCount <- assetsCount + 1
+            map <- addPolygons(map, data=poolsfacilities, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
+                               popup = ~(paste(paste0('<center><img id="imgPicture" src="', poolsfacilities$image_url,'" style="width:250px;"></center>'),
+                                               "<font color='black'><b>Name:</b>", poolsfacilities$name,
+                                               "<br><b>Location:</b>", poolsfacilities$address,
+                                               "<br><b>Usage:</b>", poolsfacilities$usage,
+                                               "<br><b>Dept:</b>", poolsfacilities$primary_user,
+                                               poolsfacilities$url, "</font>"))
+            )
+          }
+        }
+        if (input$toggleTraffic) {
+          si <- siInput()
+          if (nrow(si) > 0) {
+            assetsCount <- assetsCount + 1
+            map <- addCircleMarkers(map, data=si, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 2,
+                                         popup = ~(paste("<font color='black'><b>Location:</b>", si$description,
+                                                         ifelse(is.na(si$operation_type), "", paste("<br><b>Operation Type:</b>", si$operation_type)),
+                                                         ifelse(is.na(si$flash_time), "", paste("<br><b>Flash Time:</b>", si$flash_time)),
+                                                         ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
+            )
+        }
+      }
+      # City Bridges
+      if (input$toggleBridges) {
+        assetsCount <- assetsCount + 1
+        bridges <- bridgesInput()
+        if (nrow(bridges) > 0) {
+          map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 1.0,
+                              popup = ~(paste("<font color='black'><b>Name:</b>", bridges$IDField, "</font>"))
+    
+          )    
+        }
+      }
+      # City Steps
+      if (input$toggleSteps) {
+        assetsCount <- assetsCount + 1
+        steps <- stepsInput()
+        if (nrow(steps) > 0) {
+          map <- addPolylines(map, data=steps, color = "#f781bf", opacity = 1.0,
+                                  popup = ~(paste("<font color='black'><b>Location:</b>", steps$IDField,
+                                                  ifelse(is.na(steps$LinearFeetAmountField) | steps$LinearFeetAmountField == 0, "", paste("<br><b>Length:</b>", steps$LinearFeetAmountField, "ft")),
+                                                  ifelse(is.na(steps$InstalledYear) | steps$InstalledYear == 0, "<br><b>Year:</b> Unknown", paste("<br><b>Year:</b>", steps$InstalledYear)),
+                                                  ifelse(is.na(steps$StepMaterialField) | steps$StepMaterialField == "", "", paste("<br><b>Material:</b>", steps$StepMaterialField)),
+                                                  '<br><center><a href="http://pittsburghpa.gov/dcp/steps" target="_blank">Volunteer to Survey City Steps!</a></center></font>'))
+          )
+        }
+      }
+      # City Places Layer
+      if (input$toggleAssets) {
+        facilities <- facilitiesInput()
+        if (nrow(facilities) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addPolygons(map, data=facilities, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5,
+                             popup = ~(paste(paste0('<center><img id="imgPicture" src="', facilities$image_url,'" style="width:250px;"></center>'),
+                                             "<font color='black'><b>Name:</b>", facilities$name,
+                                             "<br><b>Location:</b>", facilities$address,
+                                             "<br><b>Usage:</b>", facilities$usage,
+                                             "<br><b>Dept:</b>", facilities$primary_user,
+                                             facilities$url, "</font>"))
+          )
+        }
+        wf <- wfInput()
+        if (nrow(wf) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addCircleMarkers(map, data=wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 2,
+                                  popup = ~(paste("<font color='black'><b>Location:</b>", wf$name,
+                                                  "<br><b>Feature Type:</b>", wf$feature_type,
+                                                  ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
+                                                  ifelse(is.na(wf$control_type), "", paste("<br><b>Control:</b>", wf$control_type)),"</font>"))
+          )
+        }
+      }
+      if (assetsCount < 1) {
+        if (Sys.Date() >= as.Date(paste0(this_year,"-11-01")) & Sys.Date() <= as.Date(paste0(this_year,"-11-08"))) {
+          egg <- load.egg
+        } else {
+          egg <- load.egg[sample(1:nrow(load.egg),1),]
+        }
+        map <- addMarkers(map, data=egg, ~X, ~Y, icon = ~icons_egg[icon], popup = ~tt) %>% 
+          setView(-79.9959, 40.4406, zoom = 10)
+      }
     map
   })
 })
