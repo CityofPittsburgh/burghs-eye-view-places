@@ -1016,49 +1016,50 @@ server <- shinyServer(function(input, output, session) {
   # Build City Map
   output$map <- renderLeaflet({
     assetsCount <- 0
-      map <- leaflet() %>% 
-        addProviderTiles(input$basemap_select,
-                         options = providerTileOptions(noWrap = TRUE)) %>%
-        addEasyButton(easyButton(
-          icon="fa-crosshairs", title="Locate Me",
-          onClick=JS("function(btn, map){ map.locate({setView: true}); }")))
-      # Economic Regions
-      if (input$toggleEconomic) {
-        economic <- economicInput()
-        if (nrow(economic) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addPolygons(map, data=economic, color = "#984ea3", fillColor = "#984ea3", fillOpacity = .5,
-                             popup = ~(paste("<font color='black'><b>Region:</b>", economic$layer,
-                                             ifelse(is.na(economic$name), "", paste("<br><b>Name:</b>", economic$name)),
-                                             '</font>'))
-          )
-        }
+    map <- leaflet() %>% 
+      addProviderTiles(input$basemap_select,
+                       options = providerTileOptions(noWrap = TRUE)) %>%
+      addEasyButton(easyButton(
+        icon="fa-crosshairs", title="Locate Me",
+        onClick=JS("function(btn, map){ map.locate({setView: true}); }")))
+    # Economic Regions
+    if (input$toggleEconomic) {
+      economic <- economicInput()
+      if (nrow(economic@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=economic, color = "#984ea3", fillColor = "#984ea3", fillOpacity = .5,
+                           popup = ~(paste("<font color='black'><b>Region:</b>", economic$layer,
+                                           ifelse(is.na(economic$name), "", paste("<br><b>Name:</b>", economic$name)),
+                                           '</font>'))
+        )
       }
-      # Environmental Regions
-      if (input$toggleEnvironmental) {
-        environmental <- environmentalInput()
-        if (nrow(environmental) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addPolygons(map, data=environmental, color = "#a65628", fillColor = "#a65628", fillOpacity = .5,
-                             popup = ~(paste("<font color='black'><b>Region:</b>", environmental$layer,
-                                             ifelse(is.na(environmental$name), "", paste("<br><b>Name:</b>", environmental$name)),
-                                             '</font>'))
-          )
-        }
+    }
+    # Environmental Regions
+    if (input$toggleEnvironmental) {
+      environmental <- environmentalInput()
+      if (nrow(environmental@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=environmental, color = "#a65628", fillColor = "#a65628", fillOpacity = .5,
+                           popup = ~(paste("<font color='black'><b>Region:</b>", environmental$layer,
+                                           ifelse(is.na(environmental$name), "", paste("<br><b>Name:</b>", environmental$name)),
+                                           '</font>'))
+        )
       }
-      # Recreation Layers
-      if (input$toggleRecreation) {
-        greenways <- greenwaysInput()
-        if (nrow(greenways) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addPolygons(map, data=greenways, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                             popup = ~(paste("<font color='black'><b>Type:</b>", greenways$layer,
-                                             ifelse(is.na(greenways$name), "", paste("<br><b>Name:</b>", greenways$name)),
-                                             '</font>'))
-          )
+    }
+    # Recreation Layers
+    if (input$toggleRecreation) {
+      greenways <- greenwaysInput()
+      if (nrow(greenways@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=greenways, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+                           popup = ~(paste("<font color='black'><b>Type:</b>", greenways$layer,
+                                           ifelse(is.na(greenways$name), "", paste("<br><b>Name:</b>", greenways$name)),
+                                           '</font>'))
+        )
       }
+      #Rec Facilities
       recfacilities <- recfacilitiesInput()
-      if (nrow(recfacilities) > 0) {
+      if (nrow(recfacilities@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolygons(map, data=recfacilities, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
                            popup = ~(paste(paste0('<center><img id="imgPicture" src="', recfacilities$image_url,'" style="width:250px;"></center>'),
@@ -1067,36 +1068,39 @@ server <- shinyServer(function(input, output, session) {
                                            "<br><b>Usage:</b>", recfacilities$usage,
                                            "<br><b>Dept:</b>", recfacilities$primary_user,
                                            recfacilities$url, "</font>"))
-        )
-      }
-      courts <- courtsInput()
-      if(nrow(courts) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=courts, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                           popup = ~(paste("<font color='black'><b>Name:</b>", courts$IDField,
-                                           "<br><b>Location:</b>", courts$ParkField,
-                                           "<br><b>Type:</b>", courts$CourtTypeField,
-                                           "<br><b>Surface Material:</b>", courts$CourtSurfaceMaterialField, 
-                                           "<br><b>Grandstands:</b>", courts$GrandstandField, "</font>"))
-        )
-      }
-      fields <- fieldsInput()
-      if (nrow(fields) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=fields, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                           popup = ~(paste("<font color='black'><b>Name:</b>", fields$IDField,
-                                           "<br><b>Location:</b>", fields$ParkField,
-                                           "<br><b>Type:</b>", fields$FieldUsageField,
-                                           ifelse(fields$InfieldTypeField == "N/A", "", paste("<br><b>Infield Type:</b>", fields$InfieldTypeField)),
-                                           "<br><b>Lights:</b>", fields$LightsField,
-                                           ifelse(fields$GoalPostField == 0, "", paste("<br><b>Goal Posts:</b>", fields$GoalPostField)),
-                                           ifelse(fields$LeftFieldDistanceField == "N/A", "", paste("<br><b>Left Field:</b>", fields$LeftFieldDistanceField, "ft")),
-                                           ifelse(fields$CenterFieldDistanceField == "N/A", "", paste("<br><b>Center Field:</b>", fields$CenterFieldDistanceField, "ft")),
-                                           ifelse(fields$RightFieldDistanceField == "N/A", "", paste("<br><b>Right Field:</b>", fields$RightFieldDistanceField, "ft")), "</font>"))
           )
         }
+        # Courts
+        courts <- courtsInput()
+        if(nrow(courts@data) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addPolygons(map, data=courts, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+                             popup = ~(paste("<font color='black'><b>Name:</b>", courts$IDField,
+                                             "<br><b>Location:</b>", courts$ParkField,
+                                             "<br><b>Type:</b>", courts$CourtTypeField,
+                                             "<br><b>Surface Material:</b>", courts$CourtSurfaceMaterialField, 
+                                             "<br><b>Grandstands:</b>", courts$GrandstandField, "</font>"))
+          )
+        }
+        # Playing Fields
+        fields <- fieldsInput()
+        if (nrow(fields@data) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addPolygons(map, data=fields, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+                             popup = ~(paste("<font color='black'><b>Name:</b>", fields$IDField,
+                                             "<br><b>Location:</b>", fields$ParkField,
+                                             "<br><b>Type:</b>", fields$FieldUsageField,
+                                             ifelse(fields$InfieldTypeField == "N/A", "", paste("<br><b>Infield Type:</b>", fields$InfieldTypeField)),
+                                             "<br><b>Lights:</b>", fields$LightsField,
+                                             ifelse(fields$GoalPostField == 0, "", paste("<br><b>Goal Posts:</b>", fields$GoalPostField)),
+                                             ifelse(fields$LeftFieldDistanceField == "N/A", "", paste("<br><b>Left Field:</b>", fields$LeftFieldDistanceField, "ft")),
+                                             ifelse(fields$CenterFieldDistanceField == "N/A", "", paste("<br><b>Center Field:</b>", fields$CenterFieldDistanceField, "ft")),
+                                             ifelse(fields$RightFieldDistanceField == "N/A", "", paste("<br><b>Right Field:</b>", fields$RightFieldDistanceField, "ft")), "</font>"))
+            )
+        }
+        # Playgrounds
         playgrounds <- playgroundsInput()
-        if (nrow(playgrounds) > 0) {
+        if (nrow(playgrounds@data) > 0) {
           assetsCount <- assetsCount + 1
           map <- addPolygons(map, data=playgrounds, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
                              popup = ~(paste("<font color='black'><b>Name:</b>", playgrounds$IDField,
@@ -1109,111 +1113,111 @@ server <- shinyServer(function(input, output, session) {
       # Pool Layers
       if (input$togglePools) {
         pools <- poolsInput()
-          if (nrow(pools) > 0) {
-            assetsCount <- assetsCount + 1
-            map <- addPolygons(map, data=pools, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
-                               popup = ~(paste("<font color='black'><b>Name:</b>", pools$IDField,
-                                               "<br><b>Usage:</b>", pools$PoolTypeField,
-                                               "<br><b>Water Source:</b>", pools$WaterSourceField,
-                                               ifelse(is.na(pools$PoolCapacityGalField), "", paste("<br><b>Capacity:</b>", prettyNum(pools$PoolCapacityGalField, big.mark = ","),"gal")), "</font>"))
-            )
-          }
-          spray <- sprayInput()
-          if (nrow(spray) > 0) {
-            assetsCount <- assetsCount + 1
-            map <- addCircleMarkers(map, data=spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 4,
-                                    popup = ~(paste("<font color='black'><b>Location:</b>", spray$name,
-                                                    "<br><b>Usage:</b>", spray$feature_type,
-                                                    ifelse(is.na(spray$make), "", paste("<br><b>Make:</b>", spray$make)),
-                                                    ifelse(is.na(spray$control_type), "", paste("<br><b>Control:</b>", spray$control_type)),"</font>"))
-            )
-          }
-          poolsfacilities <- poolsfacilitiesInput()
-          if (nrow(poolsfacilities) > 0 ) {
-            assetsCount <- assetsCount + 1
-            map <- addPolygons(map, data=poolsfacilities, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
-                               popup = ~(paste(paste0('<center><img id="imgPicture" src="', poolsfacilities$image_url,'" style="width:250px;"></center>'),
-                                               "<font color='black'><b>Name:</b>", poolsfacilities$name,
-                                               "<br><b>Location:</b>", poolsfacilities$address,
-                                               "<br><b>Usage:</b>", poolsfacilities$usage,
-                                               "<br><b>Dept:</b>", poolsfacilities$primary_user,
-                                               poolsfacilities$url, "</font>"))
-            )
-          }
-        }
-        # Traffic Signals
-        if (input$toggleTraffic) {
-          si <- siInput()
-          if (nrow(si) > 0) {
-            assetsCount <- assetsCount + 1
-            map <- addCircleMarkers(map, data=si, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 2,
-                                         popup = ~(paste("<font color='black'><b>Location:</b>", si$description,
-                                                         ifelse(is.na(si$operation_type), "", paste("<br><b>Operation Type:</b>", si$operation_type)),
-                                                         ifelse(is.na(si$flash_time), "", paste("<br><b>Flash Time:</b>", si$flash_time)),
-                                                         ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
-            )
-        }
-      }
-      # City Bridges
-      if (input$toggleBridges) {
-        bridges <- bridgesInput()
-        if (nrow(bridges) > 0) {
+        if (nrow(pools@data) > 0) {
           assetsCount <- assetsCount + 1
-          map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 1.0,
-                              popup = ~(paste("<font color='black'><b>Name:</b>", bridges$IDField, "</font>"))
-    
-          )    
+          map <- addPolygons(map, data=pools, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
+                             popup = ~(paste("<font color='black'><b>Name:</b>", pools$IDField,
+                                             "<br><b>Usage:</b>", pools$PoolTypeField,
+                                             "<br><b>Water Source:</b>", pools$WaterSourceField,
+                                             ifelse(is.na(pools$PoolCapacityGalField), "", paste("<br><b>Capacity:</b>", prettyNum(pools$PoolCapacityGalField, big.mark = ","),"gal")), "</font>"))
+          )
+        }
+        spray <- sprayInput()
+        if (nrow(spray) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addCircleMarkers(map, data=spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 4,
+                                  popup = ~(paste("<font color='black'><b>Location:</b>", spray$name,
+                                                  "<br><b>Usage:</b>", spray$feature_type,
+                                                  ifelse(is.na(spray$make), "", paste("<br><b>Make:</b>", spray$make)),
+                                                  ifelse(is.na(spray$control_type), "", paste("<br><b>Control:</b>", spray$control_type)),"</font>"))
+          )
+        }
+        poolsfacilities <- poolsfacilitiesInput()
+        if (nrow(poolsfacilities@data) > 0 ) {
+          assetsCount <- assetsCount + 1
+          map <- addPolygons(map, data=poolsfacilities, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
+                             popup = ~(paste(paste0('<center><img id="imgPicture" src="', poolsfacilities$image_url,'" style="width:250px;"></center>'),
+                                             "<font color='black'><b>Name:</b>", poolsfacilities$name,
+                                             "<br><b>Location:</b>", poolsfacilities$address,
+                                             "<br><b>Usage:</b>", poolsfacilities$usage,
+                                             "<br><b>Dept:</b>", poolsfacilities$primary_user,
+                                             poolsfacilities$url, "</font>"))
+          )
         }
       }
-      # City Steps
-      if (input$toggleSteps) {
+      # Traffic Signals
+      if (input$toggleTraffic) {
+        si <- siInput()
+        if (nrow(si) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addCircleMarkers(map, data=si, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 2,
+                                       popup = ~(paste("<font color='black'><b>Location:</b>", si$description,
+                                                       ifelse(is.na(si$operation_type), "", paste("<br><b>Operation Type:</b>", si$operation_type)),
+                                                       ifelse(is.na(si$flash_time), "", paste("<br><b>Flash Time:</b>", si$flash_time)),
+                                                       ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
+          )
+      }
+    }
+    # City Bridges
+    if (input$toggleBridges) {
+      bridges <- bridgesInput()
+      if (nrow(bridges@data) > 0) {
         assetsCount <- assetsCount + 1
-        steps <- stepsInput()
-        if (nrow(steps) > 0) {
-          map <- addPolylines(map, data=steps, color = "#f781bf", opacity = 1.0,
-                                  popup = ~(paste("<font color='black'><b>Location:</b>", steps$IDField,
-                                                  ifelse(is.na(steps$LinearFeetAmountField) | steps$LinearFeetAmountField == 0, "", paste("<br><b>Length:</b>", steps$LinearFeetAmountField, "ft")),
-                                                  ifelse(is.na(steps$InstalledYear) | steps$InstalledYear == 0, "<br><b>Year:</b> Unknown", paste("<br><b>Year:</b>", steps$InstalledYear)),
-                                                  ifelse(is.na(steps$StepMaterialField) | steps$StepMaterialField == "", "", paste("<br><b>Material:</b>", steps$StepMaterialField)),
-                                                  '<br><center><a href="http://pittsburghpa.gov/dcp/steps" target="_blank">Volunteer to Survey City Steps!</a></center></font>'))
-          )
-        }
+        map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 1.0,
+                            popup = ~(paste("<font color='black'><b>Name:</b>", bridges$IDField, "</font>"))
+  
+        )    
       }
-      # City Places Layer
-      if (input$toggleAssets) {
-        facilities <- facilitiesInput()
-        if (nrow(facilities) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addPolygons(map, data=facilities, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5,
-                             popup = ~(paste(paste0('<center><img id="imgPicture" src="', facilities$image_url,'" style="width:250px;"></center>'),
-                                             "<font color='black'><b>Name:</b>", facilities$name,
-                                             "<br><b>Location:</b>", facilities$address,
-                                             "<br><b>Usage:</b>", facilities$usage,
-                                             "<br><b>Dept:</b>", facilities$primary_user,
-                                             facilities$url, "</font>"))
-          )
-        }
-        wf <- wfInput()
-        if (nrow(wf) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addCircleMarkers(map, data=wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 2,
-                                  popup = ~(paste("<font color='black'><b>Location:</b>", wf$name,
-                                                  "<br><b>Feature Type:</b>", wf$feature_type,
-                                                  ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
-                                                  ifelse(is.na(wf$control_type), "", paste("<br><b>Control:</b>", wf$control_type)),"</font>"))
-          )
-        }
+    }
+    # City Steps
+    if (input$toggleSteps) {
+      steps <- stepsInput()
+      if (nrow(steps@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolylines(map, data=steps, color = "#f781bf", opacity = 1.0,
+                                popup = ~(paste("<font color='black'><b>Location:</b>", steps$IDField,
+                                                ifelse(is.na(steps$LinearFeetAmountField) | steps$LinearFeetAmountField == 0, "", paste("<br><b>Length:</b>", steps$LinearFeetAmountField, "ft")),
+                                                ifelse(is.na(steps$InstalledYear) | steps$InstalledYear == 0, "<br><b>Year:</b> Unknown", paste("<br><b>Year:</b>", steps$InstalledYear)),
+                                                ifelse(is.na(steps$StepMaterialField) | steps$StepMaterialField == "", "", paste("<br><b>Material:</b>", steps$StepMaterialField)),
+                                                '<br><center><a href="http://pittsburghpa.gov/dcp/steps" target="_blank">Volunteer to Survey City Steps!</a></center></font>'))
+        )
       }
-      if (assetsCount < 1) {
-        if (Sys.Date() >= as.Date(paste0(this_year,"-11-01")) & Sys.Date() <= as.Date(paste0(this_year,"-11-08"))) {
-          egg <- load.egg
-        } else {
-          egg <- load.egg[sample(1:nrow(load.egg),1),]
-        }
-        map <- addMarkers(map, data=egg, ~X, ~Y, icon = ~icons_egg[icon], popup = ~tt) %>% 
-          setView(-79.9959, 40.4406, zoom = 10)
+    }
+    # City Places Layer
+    if (input$toggleAssets) {
+      facilities <- facilitiesInput()
+      if (nrow(facilities@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=facilities, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5,
+                           popup = ~(paste(paste0('<center><img id="imgPicture" src="', facilities$image_url,'" style="width:250px;"></center>'),
+                                           "<font color='black'><b>Name:</b>", facilities$name,
+                                           "<br><b>Location:</b>", facilities$address,
+                                           "<br><b>Usage:</b>", facilities$usage,
+                                           "<br><b>Dept:</b>", facilities$primary_user,
+                                           facilities$url, "</font>"))
+        )
       }
-      map
+      wf <- wfInput()
+      if (nrow(wf) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addCircleMarkers(map, data=wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 2,
+                                popup = ~(paste("<font color='black'><b>Location:</b>", wf$name,
+                                                "<br><b>Feature Type:</b>", wf$feature_type,
+                                                ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
+                                                ifelse(is.na(wf$control_type), "", paste("<br><b>Control:</b>", wf$control_type)),"</font>"))
+        )
+      }
+    }
+    if (assetsCount == 0) {
+      if (Sys.Date() >= as.Date(paste0(this_year,"-11-01")) & Sys.Date() <= as.Date(paste0(this_year,"-11-08"))) {
+        egg <- load.egg
+      } else {
+        egg <- load.egg[sample(1:nrow(load.egg),1),]
+      }
+      map <- addMarkers(map, data=egg, ~X, ~Y, icon = ~icons_egg[icon], popup = ~tt) %>% 
+        setView(-79.9959, 40.4406, zoom = 10)
+    }
+    map
   })
 })
 
