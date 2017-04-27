@@ -31,7 +31,7 @@ library(plyr)
 library(zoo)
 library(lubridate)
 library(tools)
-
+library(stringi)
 
 # Turn off Scientific Notation
 options(scipen = 999)
@@ -383,16 +383,18 @@ ui <- navbarPage(id = "navTab",
 # Define server
 server <- shinyServer(function(input, output, session) {
   setBookmarkExclude("GetScreenWidth")
+  sessionStart <- as.numeric(Sys.time())
+  names(sessionStart) <- "sessionStart"
+  sessionID <- paste(stri_rand_strings(1, 5), gsub("\\.", "-", sessionStart) , "places", sep="-")
+  names(sessionID) <- "sessionID"
   observe({
     # Trigger this observer every time an input changes
     reactiveValuesToList(input)
     # Connect to Couch DB
     if (length(reactiveValuesToList(input)) > 0) {
-      sessionID <- session$ns(id)
-      names(sessionID) <- "sessionID"
       dateTime <- Sys.time()
       names(dateTime) <- "dateTime"
-      couchDB$dataList <- c(reactiveValuesToList(input), sessionID, dateTime)
+      couchDB$dataList <- c(reactiveValuesToList(input), sessionID, dateTime, sessionStart)
       cdbAddDoc(couchDB)
     }
     session$doBookmark()
@@ -732,7 +734,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      bridges <- steps[apply(bridges@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      bridges <- bridges[apply(bridges@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(bridges)
@@ -1154,9 +1156,9 @@ server <- shinyServer(function(input, output, session) {
       }
       # City Bridges
       if (input$toggleBridges) {
-        assetsCount <- assetsCount + 1
         bridges <- bridgesInput()
         if (nrow(bridges) > 0) {
+          assetsCount <- assetsCount + 1
           map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 1.0,
                               popup = ~(paste("<font color='black'><b>Name:</b>", bridges$IDField, "</font>"))
     
