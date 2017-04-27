@@ -35,6 +35,7 @@ library(tools)
 options(scipen = 999)
 
 ckan_api <- jsonlite::fromJSON("key.json")$ckan_api
+couchdb_pw <- jsonlite::fromJSON("key.json")$couchdb_pw
 
 # Function to read backslashes correctly
 chartr0 <- function(foo) chartr('\\','\\/',foo)
@@ -66,9 +67,6 @@ ckanGEO <- function(url) {
   c <- content(r, as ="text")
   readOGR(c, "OGRGeoJSON", verbose = F)
 }
-
-# City Boundary
-city.boundary <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/a99f25fffb7b41c8a4adf9ea676a3a0b_0.geojson", what = "sp")
 
 # Load facilities
 load.facilities_images <- ckan("07bf416f-9df2-4d70-b48d-682f608f9a6b")
@@ -1005,9 +1003,7 @@ server <- shinyServer(function(input, output, session) {
                          options = providerTileOptions(noWrap = TRUE)) %>%
         addEasyButton(easyButton(
           icon="fa-crosshairs", title="Locate Me",
-          onClick=JS("function(btn, map){ map.locate({setView: true}); }"))) %>%
-        addPolygons(data = city.boundary, stroke = TRUE, smoothFactor = 0, weight = 2, color = "#000000", opacity = 0.6,
-                    fill = TRUE, fillColor = "#00FFFFFF", fillOpacity = 0)
+          onClick=JS("function(btn, map){ map.locate({setView: true}); }")))
       # Economic Regions
       if (input$toggleEconomic) {
         economic <- economicInput()
