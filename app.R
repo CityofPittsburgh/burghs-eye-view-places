@@ -14,6 +14,7 @@ library(httr)
 library(jsonlite)
 library(readr)
 library(curl)
+library(R4CouchDB)
 
 # Visuals Libraries
 library(leaflet)
@@ -31,10 +32,13 @@ library(zoo)
 library(lubridate)
 library(tools)
 
+
 # Turn off Scientific Notation
 options(scipen = 999)
 
+#Keys
 ckan_api <- jsonlite::fromJSON("key.json")$ckan_api
+couchdb_un <- jsonlite::fromJSON("key.json")$couchdb_un
 couchdb_pw <- jsonlite::fromJSON("key.json")$couchdb_pw
 
 # Function to read backslashes correctly
@@ -197,6 +201,9 @@ load.si$flash_time <- as.factor(load.si$flash_time)
 # Load City Steps
 load.steps <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/ce94b08e-f218-43ee-a37a-df4c9f6bbf92/download/steps.geojson")
 load.steps@data$InstalledYear <-  as.numeric(format(as.Date(load.steps@data$InstalledField, format = "%Y/%m/%d"), "%Y"))
+
+# CouchDB Connection
+couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
 
 # this_year
 this_year <- format(Sys.Date(), format="%Y")
@@ -379,6 +386,15 @@ server <- shinyServer(function(input, output, session) {
   observe({
     # Trigger this observer every time an input changes
     reactiveValuesToList(input)
+    # Connect to Couch DB
+    if (length(reactiveValuesToList(input)) > 0) {
+      sessionID <- session$ns(id)
+      names(sessionID) <- "sessionID"
+      dateTime <- Sys.time()
+      names(dateTime) <- "dateTime"
+      couchDB$dataList <- c(reactiveValuesToList(input), sessionID, dateTime)
+      cdbAddDoc(couchDB)
+    }
     session$doBookmark()
   })
   # Update page URL
@@ -1195,7 +1211,7 @@ server <- shinyServer(function(input, output, session) {
         map <- addMarkers(map, data=egg, ~X, ~Y, icon = ~icons_egg[icon], popup = ~tt) %>% 
           setView(-79.9959, 40.4406, zoom = 10)
       }
-    map
+      map
   })
 })
 
