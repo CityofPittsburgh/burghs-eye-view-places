@@ -382,7 +382,7 @@ ui <- navbarPage(id = "navTab",
 
 # Define server
 server <- shinyServer(function(input, output, session) {
-  setBookmarkExclude("GetScreenWidth")
+  setBookmarkExclude(c("GetScreenWidth", "report.table_rows_all", "report.table_rows_current"))
   sessionStart <- as.numeric(Sys.time())
   names(sessionStart) <- "sessionStart"
   sessionID <- paste(stri_rand_strings(1, 5), gsub("\\.", "-", sessionStart) , "places", sep="-")
