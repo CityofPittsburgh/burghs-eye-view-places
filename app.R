@@ -67,7 +67,7 @@ ckan <- function(id) {
 }
 
 ckanGEO <- function(url) {
-  r<- GET(url, add_headers(Authorization = ckan_api))
+  r <- GET(url, add_headers(Authorization = ckan_api))
   c <- content(r, as ="text")
   readOGR(c, "OGRGeoJSON", verbose = F)
 }
@@ -260,6 +260,16 @@ if(Sys.Date() <= as.Date(paste0(this_year,"-10-31")) & Sys.Date() >= as.Date(pas
   load.egg <- read.csv("parks.csv")
   load.egg$icon <- "easter_egg"
   load.egg$tt <- "<i>You couldn't find any results, but maybe you can find my eggs.</i>"
+} else if (Sys.Date() >= as.Date(paste0(this_year,"-07-01")) & Sys.Date() <= as.Date(paste0(this_year,"-07-07"))) {
+  load.egg <- read.csv("boundaries/Parks/parks.csv")
+  load.egg$icon <- "july_4"
+  load.egg$tt <- "<i>Happy Independence Day! Looks like you need to try another search term.</i>"
+} else if (Sys.Date() >= as.Date(paste0(this_year,"-05-01")) & Sys.Date() <= as.Date(paste0(this_year,"-08-31"))) {
+  load.pools <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/6f836153-ada7-4b18-b9c9-7a290c569ea9/download/pools.geojson")
+  load.egg <- data.frame(coordinates(load.pools))
+  colnames(load.egg) <- c("X","Y")
+  load.egg$icon <- "summer"
+  load.egg$tt <- "<i>Ah... Summer! Chill out, relax and grab some rays with me. Or if you'd like try another search term.</i>"
 } else {
   X <- c(-79.9968604, -80.004055)
   Y <- c(40.4381098, 40.440631)
