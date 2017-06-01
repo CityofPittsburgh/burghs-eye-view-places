@@ -125,7 +125,7 @@ load.courts <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2
 load.fields <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/5b11db03-80aa-4146-abe3-160a3bb75e24/download/fields.geojson")
 load.fields@data$LightsField <- ifelse(load.fields@data$LightsField == 0, FALSE, TRUE)
 # Load Playgrounds
-load.playgrounds <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/2c79a4e1-d412-4e6a-bd4a-43d6ba0a8cd7/download/playgrounds.geojson")
+load.playgrounds <- ckanGEO("https://data.wprdc.org/dataset/37e7a776-c98b-4e08-ad61-a8c8e23ec9ab/resource/2606017a-13e9-4101-b723-654781516859/download/playgroundsimg.geojson")
 load.playgrounds@data$layer <- "Playground"
 
 # Load Environmental 
@@ -171,20 +171,20 @@ load.economic@data$layer <- as.factor(load.economic@data$layer)
 
 # Load Pools
 # Load Water Features
-load.wf <- ckan("1b74a658-0465-456a-929e-ff4057220274")
+load.wf <- ckanGEO("https://data.wprdc.org/dataset/fe7cfb11-9f33-4590-a5ee-04419f3f974a/resource/f7c252a5-28be-43ab-95b5-f3eb0f1eef67/download/wfimg.geojson")
 # Remove Inactive Water Features
-load.wf <- subset(load.wf, inactive == "False")
+load.wf <- load.wf[load.wf$inactive == 0,]
 # Prepare for Merge to Facilities
-load.wf <- transform(load.wf, feature_type = as.factor(mapvalues(feature_type, c("Spray", "Decorative", "Drinking Fountain"), c("Spray Fountain", "Decorative Water Fountain", "Drinking Fountain"))))
+load.wf@data <- transform(load.wf@data, feature_type = as.factor(mapvalues(feature_type, c("Spray", "Decorative"), c("Spray Fountain", "Decorative Water Fountain"))))
 load.wf$feature_type <- as.character(load.wf$feature_type)
 
 # Load Spray
-load.spray <- subset(load.wf, feature_type == "Spray Fountain")
-load.spray$feature_type <- as.factor(load.spray$feature_type)
+load.spray <- load.wf[load.wf@data$feature_type == "Spray Fountain",]
+load.spray@data$feature_type <- as.factor(load.spray@data$feature_type)
 
 # Remove Spray
-load.wf <- subset(load.wf, feature_type != "Spray Fountain")
-load.wf$feature_type <- as.factor(load.wf$feature_type)
+load.wf <- load.wf[load.wf@data$feature_type != "Spray Fountain",]
+load.wf@data$feature_type <- as.factor(load.wf@data$feature_type)
 
 # Load Pools
 load.pools <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/6f836153-ada7-4b18-b9c9-7a290c569ea9/download/pools.geojson")
@@ -199,8 +199,8 @@ load.si$operation_type <- as.factor(load.si$operation_type)
 load.si$flash_time <- as.factor(load.si$flash_time)
 
 # Load City Steps
-load.steps <- ckanGEO("https://data.wprdc.org/dataset/8186cabb-aa90-488c-b894-2d4a1b019155/resource/ce94b08e-f218-43ee-a37a-df4c9f6bbf92/download/steps.geojson")
-load.steps@data$InstalledYear <-  as.numeric(format(as.Date(load.steps@data$InstalledField, format = "%Y/%m/%d"), "%Y"))
+load.steps <- ckanGEO("https://data.wprdc.org/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson")
+load.steps@data$installed<-  as.numeric(format(as.Date(load.steps@data$installed, format = "%Y/%m/%d"), "%Y"))
 
 # CouchDB Connection
 couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
@@ -481,9 +481,9 @@ server <- shinyServer(function(input, output, session) {
                     HTML('</font>'),
                     sliderInput("ft_select",
                                 label = "Step length (ft)",
-                                min = min(load.steps$LinearFeetAmountField, na.rm = TRUE),
-                                max = max(load.steps$LinearFeetAmountField, na.rm = TRUE),
-                                value = c(min(load.steps$LinearFeetAmountField, na.rm = TRUE), max(load.steps$LinearFeetAmountField, na.rm = TRUE)),
+                                min = min(load.steps$length, na.rm = TRUE),
+                                max = max(load.steps$length, na.rm = TRUE),
+                                value = c(min(load.steps$length, na.rm = TRUE), max(load.steps$length, na.rm = TRUE)),
                                 step = 1),
                     HTML('<font color="#377eb8">'),
                     checkboxInput("togglePools",
@@ -601,9 +601,9 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('</font>'),
                                 sliderInput("ft_select",
                                             label = "Step length (ft)",
-                                            min = min(load.steps$LinearFeetAmountField, na.rm = TRUE),
-                                            max = max(load.steps$LinearFeetAmountField, na.rm = TRUE),
-                                            value = c(min(load.steps$LinearFeetAmountField, na.rm = TRUE), max(load.steps$LinearFeetAmountField, na.rm = TRUE)),
+                                            min = min(load.steps$length, na.rm = TRUE),
+                                            max = max(load.steps$length, na.rm = TRUE),
+                                            value = c(min(load.steps$length, na.rm = TRUE), max(load.steps$length, na.rm = TRUE)),
                                             step = 1),
                                 HTML('<font color="#377eb8">'),
                                 checkboxInput("togglePools",
@@ -678,12 +678,12 @@ server <- shinyServer(function(input, output, session) {
     
     # Feature Filter
     if (length(input$usage_select) > 0) {
-      wf <- wf[wf$usage %in% input$usage_select,]
+      wf <- wf[wf@data$usage %in% input$usage_select,]
     }
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      wf <- wf[apply(wf, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      wf <- wf[apply(wf@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(wf)
@@ -693,12 +693,12 @@ server <- shinyServer(function(input, output, session) {
     
     # Feature Filter
     if (length(input$water_select) > 0) {
-      spray <- spray[spray$usage %in% input$water_select,]
+      spray <- spray[spray@data$usage %in% input$water_select,]
     }
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      spray <- spray[apply(spray, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      spray <- spray[apply(spray@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(spray)
@@ -729,7 +729,7 @@ server <- shinyServer(function(input, output, session) {
     steps <- load.steps
     
     # Step Filter
-    steps <- subset(steps, LinearFeetAmountField >= input$ft_select[1] & LinearFeetAmountField <= input$ft_select[2] | is.na(LinearFeetAmountField))
+    steps <- subset(steps, length >= input$ft_select[1] & length <= input$ft_select[2] | is.na(length))
 
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
@@ -919,13 +919,13 @@ server <- shinyServer(function(input, output, session) {
       facilities <- facilitiesInput()
       wf <- wfInput()
       
-      facilities <- subset(facilities@data, select = c(usage, name, primary_user, address, neighborhood, council_district, public_works_division, police_zone))
-      colnames(facilities) <- c("Usage", "Description", "Dept", "Location", "Neighborhood", "Council", "Public Works Division", "Police Zone")
+      facilities <- subset(facilities@data, select = c(usage, name, primary_user, address))
+      colnames(facilities) <- c("Usage", "Description", "Dept", "Location")
       
       wf$Dept <- "DEPARTMENT OF PUBLIC WORKS"
       wf$Location <- NA
-      wf <- subset(wf, select = c(feature_type, name,  Dept, Location, neighborhood, council_district, public_works_division, police_zone))
-      colnames(wf) <- c("Usage", "Description", "Dept", "Location", "Neighborhood", "Council", "Public Works Division", "Police Zone")
+      wf <- subset(wf@data, select = c(feature_type, name,  Dept, Location))
+      colnames(wf) <- c("Usage", "Description", "Dept", "Location")
       
       report <- rbind(facilities, wf)
     } else if (input$report_select == "Recreation Facilities") {
@@ -945,14 +945,14 @@ server <- shinyServer(function(input, output, session) {
     } else if (input$report_select == "City Steps") {
       steps <- stepsInput()
       
-      steps <- subset(steps@data, select = c(IDField, CouncilDistrictField, MaintenanceResponsibilityField, StepMaterialField, LinearFeetAmountField, InstalledYear))
-      colnames(steps) <- c("Name", "Council", "Public Works Division", "Step Material", "Length (feet)")
+      steps <- subset(steps@data, select = c(name, length, installed))
+      colnames(steps) <- c("Name", "Length (feet)", "Year Installed")
       
       report <- steps
     } else if (input$report_select == "Playgrounds") {
       playgrounds <- playgroundsInput()
       
-      playgrounds <- subset(playgrounds@data, select = c(IDField, CouncilDistrictField, MaintenanceResponsibilityField, ParkField, StreetField))
+      playgrounds <- subset(playgrounds@data, select = c(name, street, park))
       colnames(playgrounds) <- c("Name", "Council", "Public Works Division", "Park", "Street")
       
       report <- playgrounds
@@ -975,15 +975,15 @@ server <- shinyServer(function(input, output, session) {
       poolsfacilities <- poolsfacilitiesInput()
       spray <- sprayInput()
       
-      pools <- subset(pools@data, select =  c(IDField, NeighborhoodField, PoolTypeField, WaterSourceField, PoolCapacityGalField))
+      pools <- subset(pools@data, select =  c(IDField, PoolTypeField, WaterSourceField, PoolCapacityGalField))
       
-      spray <- subset(spray, select =  c(name, neighborhood, feature_type))
-      colnames(spray) <- c("IDField", "NeighborhoodField", "PoolTypeField")
+      spray <- subset(spray@data, select =  c(name, feature_type))
+      colnames(spray) <- c("IDField", "PoolTypeField")
       spray$WaterSourceField <- NA
       spray$PoolCapacityGalField <- NA
       
-      poolsfacilities <- subset(poolsfacilities@data, select = c(name, neighborhood, usage))
-      colnames(poolsfacilities) <- c("IDField", "NeighborhoodField", "PoolTypeField")
+      poolsfacilities <- subset(poolsfacilities@data, select = c(name, usage))
+      colnames(poolsfacilities) <- c("IDField", "PoolTypeField")
       poolsfacilities$WaterSourceField <- NA
       poolsfacilities$PoolCapacityGalField <- NA
       
@@ -1113,10 +1113,10 @@ server <- shinyServer(function(input, output, session) {
         if (nrow(playgrounds@data) > 0) {
           assetsCount <- assetsCount + 1
           map <- addPolygons(map, data=playgrounds, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                             popup = ~(paste("<font color='black'><b>Name:</b>", playgrounds$IDField,
-                                             "<br><b>Location:</b>", playgrounds$StreetField,
-                                             "<br><b>Park:</b>", playgrounds$ParkField, "</font>"
-                             ))
+                             popup = ~(paste(paste0('<center><img id="imgPicture" src="', playgrounds$image,'" style="width:250px;"></center>'),
+                                             "<font color='black'><b>Name:</b>", playgrounds$name,
+                                             "<br><b>Location:</b>", playgrounds$street,
+                                             "<br><b>Park:</b>", playgrounds$park, "</font>"))
           )
         }
       }
@@ -1135,7 +1135,7 @@ server <- shinyServer(function(input, output, session) {
         spray <- sprayInput()
         if (nrow(spray) > 0) {
           assetsCount <- assetsCount + 1
-          map <- addCircleMarkers(map, data=spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 4,
+          map <- addCircleMarkers(map, data=spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, radius = 4,
                                   popup = ~(paste("<font color='black'><b>Location:</b>", spray$name,
                                                   "<br><b>Usage:</b>", spray$feature_type,
                                                   ifelse(is.na(spray$make), "", paste("<br><b>Make:</b>", spray$make)),
@@ -1185,10 +1185,10 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(steps@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolylines(map, data=steps, color = "#f781bf", opacity = 1.0,
-                                popup = ~(paste("<font color='black'><b>Location:</b>", steps$IDField,
-                                                ifelse(is.na(steps$LinearFeetAmountField) | steps$LinearFeetAmountField == 0, "", paste("<br><b>Length:</b>", steps$LinearFeetAmountField, "ft")),
-                                                ifelse(is.na(steps$InstalledYear) | steps$InstalledYear == 0, "<br><b>Year:</b> Unknown", paste("<br><b>Year:</b>", steps$InstalledYear)),
-                                                ifelse(is.na(steps$StepMaterialField) | steps$StepMaterialField == "", "", paste("<br><b>Material:</b>", steps$StepMaterialField)),
+                                popup = ~(paste(paste0('<center><img id="imgPicture" src="', steps$image,'" style="width:250px;"></center>'),
+                                                "<font color='black'><b>Location:</b>", steps$name,
+                                                ifelse(is.na(steps$length) | steps$length == 0, "", paste("<br><b>Length:</b>", steps$length, "ft")),
+                                                ifelse(is.na(steps$installed) | steps$installed == 0, "<br><b>Year:</b> Unknown", paste("<br><b>Year:</b>", steps$installed)),
                                                 '<br><center><a href="http://pittsburghpa.gov/dcp/steps" target="_blank">Volunteer to Survey City Steps!</a></center></font>'))
         )
       }
@@ -1210,7 +1210,7 @@ server <- shinyServer(function(input, output, session) {
       wf <- wfInput()
       if (nrow(wf) > 0) {
         assetsCount <- assetsCount + 1
-        map <- addCircleMarkers(map, data=wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, lat = ~latitude, lng = ~longitude, radius = 2,
+        map <- addCircleMarkers(map, data=wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, radius = 2,
                                 popup = ~(paste("<font color='black'><b>Location:</b>", wf$name,
                                                 "<br><b>Feature Type:</b>", wf$feature_type,
                                                 ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
