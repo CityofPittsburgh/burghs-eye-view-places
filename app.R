@@ -202,6 +202,15 @@ load.si$flash_time <- as.factor(load.si$flash_time)
 load.steps <- ckanGEO("https://data.wprdc.org/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson")
 load.steps@data$installed<-  as.numeric(format(as.Date(load.steps@data$installed, format = "%Y/%m/%d"), "%Y"))
 
+# Load Retaining Walls
+load.walls <- ckanGEO("https://data.wprdc.org/dataset/5e77546c-f1e1-432a-b556-9ccf29db9b2c/resource/b126d855-d283-4875-aa29-3180099090ec/download/retainingwallsimg.geojson")
+
+ft_max <- max(c(load.steps$length, load.walls$length), na.rm = TRUE)
+ft_min <- min(c(load.steps$length, load.walls$length), na.rm = TRUE)
+
+# Load Paving Schedule
+load.streets <- ckanGEO("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson")
+
 # CouchDB Connection
 couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
 
@@ -343,13 +352,13 @@ ui <- navbarPage(id = "navTab",
                                      }"),
                           uiOutput("placesPanel")
                  ),
-                 tabPanel(a("Parcels", href="https://pittsburghpa.shinyapps.io/parcel_viewer/", style = "padding-top: 0px; padding-bottom: 0px; bottom: 19; top: -19; bottom: 19px")),
-                 tabPanel('Data', id = "Data", value = "Data",
+                 tabPanel(a("Parcels", href="https://pittsburghpa.shinyapps.io/BurghsEyeViewParcels/", style = "padding-top: 0px; padding-bottom: 0px; bottom: 19; top: -19; bottom: 19px")),
+                 tabPanel('Data: Places', id = "Data: Places", value = "Data: Places",
                           # Select Dataset for Export
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("City Assets", "City Bridges", "City Steps", "Courts", "Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals"),
+                                        choices = c("City Assets", "City Bridges", "City Steps", "City Retaining Walls", "Courts", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals"),
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -439,7 +448,7 @@ server <- shinyServer(function(input, output, session) {
                              }')),
         absolutePanel(
           # Input panel for Desktops (alpha'd)
-          top = 70, left = 50, width = '300px',
+          top = 70, left = 50, width = '325px',
           wellPanel(id = "tPanel", style = "overflow-y:auto; max-height: calc(100vh - 90px) !important;",
                     textInput("search",
                               value = "",
@@ -459,6 +468,17 @@ server <- shinyServer(function(input, output, session) {
                                 label= NULL,
                                 c(`Rentable` = '', levels(load.facilities$rentable)),
                                 selectize = TRUE),
+                    HTML('<font color="#999999">'),
+                    checkboxInput("toggleStreets",
+                                  label = "Paving Schedule",
+                                  value = TRUE),
+                    HTML('</font>'),
+                    selectInput("year_select",
+                                label = NULL,
+                                c(`Paving Year` ='', levels(load.streets$start_year)),
+                                selected = this_year,
+                                multiple = TRUE,
+                                selectize = TRUE),
                     HTML('<font color="#D4AF37">'),
                     checkboxInput("toggleBridges",
                                   label = "City Bridges",
@@ -471,7 +491,7 @@ server <- shinyServer(function(input, output, session) {
                     HTML('</font>'),
                     selectInput("recreation_select",
                                 label= NULL,
-                                c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts$CourtTypeField), levels(load.fields$FieldUsageField), levels(load.recfacilities@data$usage), "Playground"))),
+                                c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts@data$CourtTypeField), levels(load.fields@data$FieldUsageField), levels(load.recfacilities@data$usage), "Playground"))),
                                 multiple = TRUE,
                                 selectize = TRUE),
                     HTML('<font color="#f781bf">'),
@@ -479,11 +499,16 @@ server <- shinyServer(function(input, output, session) {
                                   label = "City Steps",
                                   value = TRUE),
                     HTML('</font>'),
+                    HTML('<font color="#43a1a1">'),
+                    checkboxInput("toggleWalls",
+                                  label = "City Retaining Walls",
+                                  value = TRUE),
+                    HTML('</font>'),
                     sliderInput("ft_select",
-                                label = "Step length (ft)",
-                                min = min(load.steps$length, na.rm = TRUE),
-                                max = max(load.steps$length, na.rm = TRUE),
-                                value = c(min(load.steps$length, na.rm = TRUE), max(load.steps$length, na.rm = TRUE)),
+                                label = "Step/Wall length (ft)",
+                                min = ft_min,
+                                max = ft_max,
+                                value = c(ft_min, ft_max),
                                 step = 1),
                     HTML('<font color="#377eb8">'),
                     checkboxInput("togglePools",
@@ -579,6 +604,17 @@ server <- shinyServer(function(input, output, session) {
                                             label= NULL,
                                             c(`Rentable` = '', levels(load.facilities$rentable)),
                                             selectize = TRUE),
+                                HTML('<font color="#999999">'),
+                                checkboxInput("toggleStreets",
+                                              label = "Paving Schedule",
+                                              value = TRUE),
+                                HTML('</font>'),
+                                selectInput("year_select",
+                                            label = NULL,
+                                            c(`Paving Year` ='', levels(load.streets$start_year)),
+                                            selected = this_year,
+                                            multiple = TRUE,
+                                            selectize = TRUE),
                                 HTML('<font color="#D4AF37">'),
                                 checkboxInput("toggleBridges",
                                               label = "City Bridges",
@@ -599,11 +635,16 @@ server <- shinyServer(function(input, output, session) {
                                               label = "City Steps",
                                               value = TRUE),
                                 HTML('</font>'),
+                                HTML('<font color="#43a1a1">'),
+                                checkboxInput("toggleWalls",
+                                              label = "City Retaining Walls",
+                                              value = TRUE),
+                                HTML('</font>'),
                                 sliderInput("ft_select",
-                                            label = "Step length (ft)",
-                                            min = min(load.steps$length, na.rm = TRUE),
-                                            max = max(load.steps$length, na.rm = TRUE),
-                                            value = c(min(load.steps$length, na.rm = TRUE), max(load.steps$length, na.rm = TRUE)),
+                                            label = "Step/Wall length (ft)",
+                                            min = ft_min,
+                                            max = ft_max,
+                                            value = c(ft_min, ft_max),
                                             step = 1),
                                 HTML('<font color="#377eb8">'),
                                 checkboxInput("togglePools",
@@ -738,6 +779,29 @@ server <- shinyServer(function(input, output, session) {
     
     return(steps)
   })
+  wallsInput <- reactive({
+    walls <- load.walls
+    
+    # Length Filter
+    walls <- subset(walls, length >= input$ft_select[1] & length <= input$ft_select[2] | is.na(length))
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      walls <- walls[apply(walls@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(walls)
+  })
+  streetsInput <- reactive({
+    streets <- load.streets
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      streets <- walls[apply(streets@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(streets)
+  })
   # Bridges data with Filters
   bridgesInput <- reactive({
     bridges <- load.bridges
@@ -748,6 +812,21 @@ server <- shinyServer(function(input, output, session) {
     }
     
     return(bridges)
+  })
+  streetsInput <- reactive({
+    streets <- load.streets
+    
+    # Usage Filter
+    if (length(input$year_select) > 0) {
+      streets <- streets[streets@data$start_year %in% input$year_select,]
+    }
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      streets <- streets[apply(streets@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(streets)
   })
   poolsInput <- reactive({
     pools <- load.pools
@@ -994,11 +1073,25 @@ server <- shinyServer(function(input, output, session) {
     } else if (input$report_select == "Traffic Signals") {
       si <- siInput()
 
-      si <- subset(si, select = c(description, operation_type, flash_time, flash_yellow, neighborhood, council_district, public_works_division, police_zone))
+      si <- subset(si@data, select = c(description, operation_type, flash_time, flash_yellow, neighborhood, council_district, public_works_division, police_zone))
       colnames(si) <- c("Location", "Operation Type", "Flash Time", "Flash Yellow", "Neighborhood", "Council", "Public Works Division", "Police Zone")
       
       report <- si
-    }
+    } else if (input$report_select == "Paving Schedule") {
+      streets <- streetsInput()
+      
+      streets <- subset(streets@data, select = c(street, route_ahead, route_back, start_year, status))
+      colnames(streets) <- c("Name", "Route Ahead", "Route Back", "Start Year", "Status")
+      
+      report <- streets
+    } else if (input$report_select == "City Retaining Walls") {
+      walls <- wallsInput
+      
+      walls <- subset(walls@data, select = c(name, street, year, to_street, length, height))
+      colnames(walls) <- c("Name", "Street", "Year Constructed", "To Street", "Length (ft)", "Height (ft)")
+      
+      report <- walls
+    } 
     return(report)
   })
   downloadInput <- reactive({
@@ -1167,13 +1260,28 @@ server <- shinyServer(function(input, output, session) {
                                                        ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
           )
       }
+      }
+    # Paving Schedule
+    if (input$toggleStreets) {
+      streets <- streetsInput()
+      if (nrow(streets@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolylines(map, data=streets, color = "#999999", opacity = 0.75,
+                            popup = ~(paste("<font color='black'><b>Street:</b>", streets$street,
+                                            "<br><b>Route Ahead:</b>", streets$route_ahead, 
+                                            "<br><b>Route Back:</b>", streets$route_back, 
+                                            "<br><b>Start Year:</b>", streets$start_year,
+                                            "<br><b>Status:</b>", streets$status, "</font>"))
+                            
+        )    
+      }
     }
     # City Bridges
     if (input$toggleBridges) {
       bridges <- bridgesInput()
       if (nrow(bridges@data) > 0) {
         assetsCount <- assetsCount + 1
-        map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 1.0,
+        map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 0.75,
                             popup = ~(paste("<font color='black'><b>Name:</b>", bridges$IDField, "</font>"))
   
         )    
@@ -1184,12 +1292,25 @@ server <- shinyServer(function(input, output, session) {
       steps <- stepsInput()
       if (nrow(steps@data) > 0) {
         assetsCount <- assetsCount + 1
-        map <- addPolylines(map, data=steps, color = "#f781bf", opacity = 1.0,
+        map <- addPolylines(map, data=steps, color = "#f781bf", opacity = 0.75,
                                 popup = ~(paste(paste0('<center><img id="imgPicture" src="', steps$image,'" style="width:250px;"></center>'),
                                                 "<font color='black'><b>Location:</b>", steps$name,
                                                 ifelse(is.na(steps$length) | steps$length == 0, "", paste("<br><b>Length:</b>", steps$length, "ft")),
-                                                ifelse(is.na(steps$installed) | steps$installed == 0, "<br><b>Year:</b> Unknown", paste("<br><b>Year:</b>", steps$installed)),
+                                                ifelse(is.na(steps$installed) | steps$installed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", steps$installed)),
                                                 '<br><center><a href="http://pittsburghpa.gov/dcp/steps" target="_blank">Volunteer to Survey City Steps!</a></center></font>'))
+        )
+      }
+    }
+    # Retaining Walls
+    if (input$toggleWalls) {
+      walls <- wallsInput()
+      if (nrow(walls@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolylines(map, data=walls, color = "#43a1a1", opacity = 0.75,
+                            popup = ~(paste("<font color='black'><b>Location:</b>", walls$name,
+                                            ifelse(is.na(walls$length) | walls$length == 0, "", paste("<br><b>Length:</b>", walls$length, "ft")),
+                                            ifelse(is.na(walls$height) | walls$height == 0, "", paste("<br><b>Length:</b>", walls$height, "ft")),
+                                            ifelse(is.na(walls$year_constructed) | walls$year_constructed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", walls$year_constructed)), '</font>'))
         )
       }
     }
