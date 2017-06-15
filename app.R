@@ -420,7 +420,7 @@ server <- shinyServer(function(input, output, session) {
   })
   output$buttonStyle <- renderUI({
     # Generate search & layer panel & Map (checks for mobile devices)
-    if (as.numeric(input$GetScreenWidth) > 800) {
+    if (FALSE) {
       div(style="margin-top: 20px", downloadButton("downloadData", paste("Export" , input$report_select), class = "dlBut"))
     } else {
       div(downloadButton("downloadData", paste("Export" , input$report_select), class = "dlBut"))
@@ -429,7 +429,7 @@ server <- shinyServer(function(input, output, session) {
   # City Map UI
   output$placesPanel <- renderUI({
     # UI for Desktop Users
-    if (as.numeric(input$GetScreenWidth) > 800) {
+    if (FALSE) {
       tagList(
         # Generate Map
         leafletOutput("map"),
@@ -589,7 +589,7 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('<font color="#ff7f00">'),
                                 checkboxInput("toggleAssets",
                                               label = "City Assets",
-                                              value = TRUE),
+                                              value = FALSE),
                                 HTML('</font>'),
                                 selectInput("usage_select",
                                             label = NULL,
@@ -614,12 +614,12 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('<font color="#D4AF37">'),
                                 checkboxInput("toggleBridges",
                                               label = "City Bridges",
-                                              value = TRUE),
+                                              value = FALSE),
                                 HTML('</font>'),
                                 HTML('<font color="#4daf4a">'),
                                 checkboxInput("toggleRecreation",
                                               label= "Recreation",
-                                              value = TRUE),
+                                              value = FALSE),
                                 HTML('</font>'),
                                 selectInput("recreation_select",
                                             label= NULL,
@@ -629,12 +629,12 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('<font color="#f781bf">'),
                                 checkboxInput("toggleSteps",
                                               label = "City Steps",
-                                              value = TRUE),
+                                              value = FALSE),
                                 HTML('</font>'),
                                 HTML('<font color="#43a1a1">'),
                                 checkboxInput("toggleWalls",
                                               label = "City Retaining Walls",
-                                              value = TRUE),
+                                              value = FALSE),
                                 HTML('</font>'),
                                 sliderInput("ft_select",
                                             label = "Step/Wall length (ft)",
@@ -645,7 +645,7 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('<font color="#377eb8">'),
                                 checkboxInput("togglePools",
                                               label = "Pools & Spray Parks",
-                                              value = TRUE),
+                                              value = FALSE),
                                 HTML('</font>'),
                                 selectInput("water_select",
                                             label = NULL,
