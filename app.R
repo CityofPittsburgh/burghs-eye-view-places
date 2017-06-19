@@ -32,6 +32,7 @@ library(zoo)
 library(lubridate)
 library(tools)
 library(stringi)
+library(purrr)
 
 # Turn off Scientific Notation
 options(scipen = 999)
@@ -1268,9 +1269,11 @@ server <- shinyServer(function(input, output, session) {
         assetsCount <- assetsCount + 1
         map <- addPolylines(map, data=streets, color = "#999999", opacity = 0.75,
                             popup = ~(paste("<font color='black'><b>Street:</b>", streets$street,
-                                            "<br><b>Route Ahead:</b>", streets$route_ahead, 
-                                            "<br><b>Route Back:</b>", streets$route_back, 
+                                            "<br><b>Description:</b>", streets$task_description,
+                                            ifelse(is.na(streets$stop_date_actual), "", paste("<br><b>Stop Date:</b>", streets$stop_date_actual)),
                                             "<br><b>Start Year:</b>", streets$start_year,
+                                            "<br><b>Route Ahead:</b>", streets$route_ahead, 
+                                            "<br><b>Route Back:</b>", streets$route_back,
                                             "<br><b>Status:</b>", streets$status, "</font>"))
                             
         )    
