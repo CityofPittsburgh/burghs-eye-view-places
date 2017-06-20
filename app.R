@@ -120,7 +120,7 @@ load.fields <- ckanGEO("https://data.wprdc.org/dataset/87c77ec3-db98-4b2a-8891-d
 load.fields@data$has_lights <- ifelse(load.fields@data$has_lights == 0, FALSE, TRUE)
 
 # Load Playgrounds
-load.playgrounds <- ckanGEO("https://data.wprdc.org/dataset/37e7a776-c98b-4e08-ad61-a8c8e23ec9ab/resource/2606017a-13e9-4101-b723-654781516859/download/playgroundsimg.geojson")
+load.playgrounds <- ckanGEO("https://data.wprdc.org/dataset/37e7a776-c98b-4e08-ad61-a8c8e23ec9ab/resource/12d59d62-e86d-4f37-af19-463050496ed6/download/playgroundsimg.geojson")
 load.playgrounds@data$layer <- "Playground"
 
 # Load Environmental 
@@ -199,7 +199,6 @@ load.steps@data$installed<-  as.numeric(format(as.Date(load.steps@data$installed
 
 # Load Retaining Walls
 load.walls <- ckanGEO("https://data.wprdc.org/dataset/5e77546c-f1e1-432a-b556-9ccf29db9b2c/resource/b126d855-d283-4875-aa29-3180099090ec/download/retainingwallsimg.geojson")
-
 ft_max <- max(c(load.steps$length, load.walls$length), na.rm = TRUE)
 ft_min <- min(c(load.steps$length, load.walls$length), na.rm = TRUE)
 
@@ -1287,8 +1286,8 @@ server <- shinyServer(function(input, output, session) {
         assetsCount <- assetsCount + 1
         map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 0.75,
                             popup = ~(paste("<font color='black'><b>Name:</b>", bridges$name, 
-                                            "<br><b>Start Neighborhood:", bridges$start_neighborhood,
-                                            "<br><b>End Neighborhood:", bridges$end_neighborhood,
+                                            "<br><b>Start Neighborhood:</b>", bridges$start_neighborhood,
+                                            ifelse(is.na(bridges$end_neighborhood), "", paste( "<br><b>End Neighborhood:</b>", bridges$end_neighborhood)),
                                             "</font>"))
   
         )    
