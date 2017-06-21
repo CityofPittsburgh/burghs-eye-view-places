@@ -1065,7 +1065,7 @@ server <- shinyServer(function(input, output, session) {
       pools_spray <- rbind(spray, pools, poolsfacilities)
       colnames(pools_spray) <- c("Name", "Type", "Water Source", "Capacity (gal)")
       
-      pools_spray$Name <- as.character(pools_spray$Name)
+      pools_spray$Name <- as.character(pools_spray$name)
       pools_spray <- pools_spray[order(pools_spray$Name),] 
       
       report <- pools_spray
@@ -1229,7 +1229,8 @@ server <- shinyServer(function(input, output, session) {
         if (nrow(spray) > 0) {
           assetsCount <- assetsCount + 1
           map <- addCircleMarkers(map, data=spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, radius = 4,
-                                  popup = ~(paste("<font color='black'><b>Location:</b>", spray$name,
+                                  popup = ~(paste(paste0('<center><img id="imgPicture" src="', spray$image,'" style="width:250px;"></center>'),
+                                                  "<font color='black'><b>Location:</b>", spray$name,
                                                   "<br><b>Usage:</b>", spray$feature_type,
                                                   ifelse(is.na(spray$make), "", paste("<br><b>Make:</b>", spray$make)),
                                                   ifelse(is.na(spray$control_type), "", paste("<br><b>Control:</b>", spray$control_type)),"</font>"))
@@ -1313,7 +1314,8 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(walls@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolylines(map, data=walls, color = "#43a1a1", opacity = 0.75,
-                            popup = ~(paste("<font color='black'><b>Location:</b>", walls$name,
+                            popup = ~(paste(paste0('<center><img id="imgPicture" src="', walls$image,'" style="width:250px;"></center>'),
+                                            "<font color='black'><b>Location:</b>", walls$name,
                                             ifelse(is.na(walls$length) | walls$length == 0, "", paste("<br><b>Length:</b>", walls$length, "ft")),
                                             ifelse(is.na(walls$height) | walls$height == 0, "", paste("<br><b>Height:</b>", walls$height, "ft")),
                                             ifelse(is.na(walls$year_constructed) | walls$year_constructed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", walls$year_constructed)), '</font>'))
@@ -1338,7 +1340,8 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(wf) > 0) {
         assetsCount <- assetsCount + 1
         map <- addCircleMarkers(map, data=wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, radius = 2,
-                                popup = ~(paste("<font color='black'><b>Location:</b>", wf$name,
+                                popup = ~(paste(paste0('<center><img id="imgPicture" src="', wf$image,'" style="width:250px;"></center>'),
+                                                "<font color='black'><b>Location:</b>", wf$name,
                                                 "<br><b>Feature Type:</b>", wf$feature_type,
                                                 ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
                                                 ifelse(is.na(wf$control_type), "", paste("<br><b>Control:</b>", wf$control_type)),"</font>"))
