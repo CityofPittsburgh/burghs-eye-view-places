@@ -33,6 +33,7 @@ library(lubridate)
 library(tools)
 library(stringi)
 library(purrr)
+library(dplyr)
 
 # Turn off Scientific Notation
 options(scipen = 999)
@@ -147,11 +148,11 @@ load.environmental <- rbind(floodzones, landslide, undermined, makeUniqueIDs = T
 load.environmental@data$layer <- as.factor(load.environmental@data$layer)
 
 # Load Economic
-# Load URA Main St
+# Load Main St
 mainst <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/ab9b192ab4ba46d88144bacf5a0252e0_0.geojson", what = "sp", disambiguateFIDs= TRUE)
 mainst$name <- as.character(mainst$name)
 mainst$name <- ifelse(mainst$name == "", NA, mainst$name)
-mainst$layer <- "URA Main St"
+mainst$layer <- "Main Streets"
 mainst@data <- subset(mainst@data, select = c(name, layer))
 
 # Load Historic Districts
@@ -204,6 +205,25 @@ ft_min <- min(c(load.steps$length, load.walls$length), na.rm = TRUE)
 
 # Load Paving Schedule
 load.streets <- ckanGEO("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson")
+
+# Waste Material Types
+materials <- as.factor(c("Alkaline Batteries", "Household Chemicals and Waste", "Clothing", "Small Business Recyclables", "Plastic Bags and Films", "Household Recyclables", "CFL Lightbulbs", "Automotive Batteries", "Freon Appliances", "Fluorescent Tube Lightbulbs", "Prescription Medication", "Collectibles", "Tires"))
+
+# Load Waste Locations
+load.waste <- ckanGEO("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
+#Build Address
+load.waste$address <- paste0(ifelse(is.na(load.waste$address_number), "", paste0(as.character(as.integer(load.waste$address_number)), " ")), ifelse(is.na(load.waste$street), "", as.character(load.waste$street)), paste0(ifelse(is.na(load.waste$city) | load.waste$city == "", "", paste0(as.character(as.integer(load.waste$city)), " "))))
+load.waste$managed_by_city <- ifelse(load.waste@data$managed_by_city == 1, TRUE, FALSE)
+# Build Description
+load.waste$description <- ""
+for (i in levels(materials)) {
+  col <- gsub(" ", "_", paste("accepts", tolower(i)))
+  load.waste$description <- case_when(
+    load.waste@data[,col] == 1 & load.waste$description == "" ~ i,
+    load.waste@data[,col] == 1 & load.waste$description != "" ~ paste(load.waste$description, i, sep = ", "),
+    TRUE ~ load.waste$description
+  )
+}
 
 # CouchDB Connection
 couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
@@ -516,6 +536,16 @@ server <- shinyServer(function(input, output, session) {
                                 c(`Water Category`='', sort(unique(c(levels(load.pools$type) ,levels(load.poolsfacilities@data$usage), levels(load.spray$feature_type))))),
                                 multiple = TRUE,
                                 selectize = TRUE),
+                    HTML('<font color="#79db39">'),
+                    checkboxInput("toggleWaste",
+                                  label = "Waste Recovery Sites",
+                                  value = FALSE),
+                    selectInput("materials_select",
+                                label = NULL,
+                                c(`Accepted Materials` ='', levels(materials)),
+                                  multiple = TRUE,
+                                  selectize = TRUE),
+                    HTML('</font>'),
                     HTML('<font color="#984ea3">'),
                     checkboxInput("toggleEconomic",
                                   label = "Economic",
@@ -652,6 +682,16 @@ server <- shinyServer(function(input, output, session) {
                                             c(`Water Category`='', sort(unique(c(levels(load.pools$type) ,levels(load.poolsfacilities@data$usage), levels(load.spray$feature_type))))),
                                             multiple = TRUE,
                                             selectize = TRUE),
+                                HTML('<font color="#79db39">'),
+                                checkboxInput("toggleWaste",
+                                              label = "Waste Recovery Sites",
+                                              value = FALSE),
+                                selectInput("materials_select",
+                                            label = NULL,
+                                            c(`Accepted Materials` ='', levels(materials)),
+                                            multiple = TRUE,
+                                            selectize = TRUE),
+                                HTML('</font>'),           
                                 HTML('<font color="#984ea3">'),
                                 checkboxInput("toggleEconomic",
                                               label = "Economic",
@@ -793,10 +833,44 @@ server <- shinyServer(function(input, output, session) {
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      streets <- walls[apply(streets@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      streets <- streets[apply(streets@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(streets)
+  })
+  # Waste Recovery Sites with Filters
+  wasteInput <- reactive({
+    waste <- load.waste
+  
+    # Materials Select Filter for multiple
+    if (length(input$materials_select) > 1) {
+      # Put in Column Name
+      cols <- gsub(" ", "_", paste("accepts", tolower(input$materials_select)))
+      count <- 1
+      for (i in cols) {
+        temp <- waste[c(waste@data[i] == 1),]
+        #Create DF
+        if (count == 1) {
+          count <- 2
+          spdf <- temp
+        } else {
+          #Bind DF
+          spdf <- rbind(spdf, temp)
+        }
+      }
+      # Keep Unique Rows
+      waste <- spdf[rownames(unique(spdf@data)),]
+    # Materials Select Filter for single
+    } else if (length(input$materials_select) == 1) {
+      waste <- waste[c(waste@data[gsub(" ", "_", paste("accepts", tolower(input$materials_select)))] == 1),]
+    }
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      waste <- waste[apply(waste@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(waste)
   })
   # Bridges data with Filters
   bridgesInput <- reactive({
@@ -1261,7 +1335,7 @@ server <- shinyServer(function(input, output, session) {
                                                        ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
           )
       }
-      }
+    }
     # Paving Schedule
     if (input$toggleStreets) {
       streets <- streetsInput()
@@ -1276,8 +1350,23 @@ server <- shinyServer(function(input, output, session) {
                                             "<br><b>Route Ahead:</b>", streets$route_ahead, 
                                             "<br><b>Route Back:</b>", streets$route_back,
                                             "<br><b>Status:</b>", streets$status, "</font>"))
-                            
         )    
+      }
+    }
+    # Waste Recovery Sites
+    if (input$toggleWaste) {
+      waste <- wasteInput()
+      if (nrow(waste) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addCircleMarkers(map, data=waste, color = "#79db39", fillColor = "#79db39", fillOpacity = .5, radius = 8,
+                                popup = ~(paste("<font color='black'><b>Name:</b>", ifelse(waste$website == "", as.character(waste$name), paste0('<a href=', waste$website,'">', waste$name, '</a>')),
+                                                "<br><b>City Location:</b>", waste$managed_by_city,
+                                                "<br><b>Location:</b>", waste$address,
+                                                "<br><b>Phone:</b>", waste$phone_number,
+                                                "<br><b>Hours:</b>", waste$hours_of_operation,
+                                                ifelse(waste$description == "", "", paste("<br><b>Materials:</b>", waste$description)),
+                                                ifelse(waste$notes == "", "", paste("<br><b>Notes:</b>", waste$notes, "</font>"))))
+        )
       }
     }
     # City Bridges
