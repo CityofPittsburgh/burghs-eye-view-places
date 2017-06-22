@@ -195,7 +195,7 @@ load.si@data$flash_time <- as.factor(load.si@data$flash_time)
 
 # Load City Steps
 load.steps <- ckanGEO("https://data.wprdc.org/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson")
-load.steps@data$installed<-  as.numeric(format(as.Date(load.steps@data$installed, format = "%Y/%m/%d"), "%Y"))
+load.steps@data$installed<-  as.numeric(format(as.Date(load.steps@data$installed), "%Y"))
 
 # Load Retaining Walls
 load.walls <- ckanGEO("https://data.wprdc.org/dataset/5e77546c-f1e1-432a-b556-9ccf29db9b2c/resource/b126d855-d283-4875-aa29-3180099090ec/download/retainingwallsimg.geojson")
@@ -1232,8 +1232,8 @@ server <- shinyServer(function(input, output, session) {
                                   popup = ~(paste(paste0('<center><img id="imgPicture" src="', spray$image,'" style="width:250px;"></center>'),
                                                   "<font color='black'><b>Location:</b>", spray$name,
                                                   "<br><b>Usage:</b>", spray$feature_type,
-                                                  ifelse(is.na(spray$make), "", paste("<br><b>Make:</b>", spray$make)),
-                                                  ifelse(is.na(spray$control_type), "", paste("<br><b>Control:</b>", spray$control_type)),"</font>"))
+                                                  ifelse(is.na(spray$make) | spray$make == "", "", paste("<br><b>Make:</b>", spray$make)),
+                                                  ifelse(is.na(spray$control_type) | spray$control_type == "", "", paste("<br><b>Control:</b>", spray$control_type)),"</font>"))
           )
         }
         poolsfacilities <- poolsfacilitiesInput()
@@ -1286,11 +1286,10 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(bridges@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 0.75,
-                            popup = ~(paste("<font color='black'><b>Name:</b>", bridges$name, 
+                            popup = ~(paste(paste0('<center><img id="imgPicture" src="', bridges$image,'" style="width:250px;"></center>'),
+                                            "<font color='black'><b>Name:</b>", bridges$name, 
                                             "<br><b>Start Neighborhood:</b>", bridges$start_neighborhood,
-                                            ifelse(is.na(bridges$end_neighborhood), "", paste( "<br><b>End Neighborhood:</b>", bridges$end_neighborhood)),
-                                            "</font>"))
-  
+                                            ifelse(is.na(bridges$end_neighborhood), "", paste( "<br><b>End Neighborhood:</b>", bridges$end_neighborhood)), "</font>"))
         )    
       }
     }
