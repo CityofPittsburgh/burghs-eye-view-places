@@ -209,10 +209,10 @@ load.streets <- ckanGEO("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-
 # Waste Material Types
 materials <- as.factor(c("Alkaline Batteries", "Household Chemicals and Waste", "Clothing", "Small Business Recyclables", "Plastic Bags and Films", "Household Recyclables", "CFL Lightbulbs", "Automotive Batteries", "Freon Appliances", "Fluorescent Tube Lightbulbs", "Prescription Medication", "Collectibles", "Tires"))
 
-# Load Waste Locations
+# Load Waste Recovery Sites
 load.waste <- ckanGEO("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
 #Build Address
-load.waste$address <- paste0(ifelse(is.na(load.waste$address_number), "", paste0(as.character(as.integer(load.waste$address_number)), " ")), ifelse(is.na(load.waste$street), "", as.character(load.waste$street)), paste0(ifelse(is.na(load.waste$city) | load.waste$city == "", "", paste0(as.character(load.waste$city), ", PA"))))
+load.waste$address <- paste0(ifelse(is.na(load.waste$address_number), "", paste0(as.character(as.integer(load.waste$address_number)), " ")), ifelse(is.na(load.waste$street), "", as.character(load.waste$street)), paste0(ifelse(is.na(load.waste$city) | load.waste$city == "", "", paste0(" ", as.character(load.waste$city), ", PA"))))
 load.waste$managed_by_city <- ifelse(load.waste@data$managed_by_city == 1, TRUE, FALSE)
 # Build Description
 load.waste$description <- ""
@@ -540,7 +540,7 @@ server <- shinyServer(function(input, output, session) {
                     HTML('<font color="#79db39">'),
                     checkboxInput("toggleWaste",
                                   label = "Waste Recovery Sites",
-                                  value = FALSE),
+                                  value = TRUE),
                     selectInput("materials_select",
                                 label = NULL,
                                 c(`Accepted Materials` ='', levels(materials)),
@@ -686,7 +686,7 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('<font color="#79db39">'),
                                 checkboxInput("toggleWaste",
                                               label = "Waste Recovery Sites",
-                                              value = FALSE),
+                                              value = TRUE),
                                 selectInput("materials_select",
                                             label = NULL,
                                             c(`Accepted Materials` ='', levels(materials)),
