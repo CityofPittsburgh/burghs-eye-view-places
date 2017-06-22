@@ -212,7 +212,7 @@ materials <- as.factor(c("Alkaline Batteries", "Household Chemicals and Waste", 
 # Load Waste Locations
 load.waste <- ckanGEO("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
 #Build Address
-load.waste$address <- paste0(ifelse(is.na(load.waste$address_number), "", paste0(as.character(as.integer(load.waste$address_number)), " ")), ifelse(is.na(load.waste$street), "", as.character(load.waste$street)), paste0(ifelse(is.na(load.waste$city) | load.waste$city == "", "", paste0(as.character(as.integer(load.waste$city)), " "))))
+load.waste$address <- paste0(ifelse(is.na(load.waste$address_number), "", paste0(as.character(as.integer(load.waste$address_number)), " ")), ifelse(is.na(load.waste$street), "", as.character(load.waste$street)), paste0(ifelse(is.na(load.waste$city) | load.waste$city == "", "", paste0(as.character(load.waste$city), ", PA"))))
 load.waste$managed_by_city <- ifelse(load.waste@data$managed_by_city == 1, TRUE, FALSE)
 # Build Description
 load.waste$description <- ""
@@ -226,7 +226,8 @@ for (i in levels(materials)) {
 }
 
 # CouchDB Connection
-couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
+# couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
+couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
 # this_year
 this_year <- format(Sys.Date(), format="%Y")
