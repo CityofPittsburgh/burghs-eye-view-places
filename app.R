@@ -213,6 +213,9 @@ materials <- as.factor(c("Alkaline Batteries", "Household Chemicals and Waste", 
 load.waste <- ckanGEO("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
 #Build Address
 load.waste$address <- paste0(ifelse(is.na(load.waste$address_number), "", paste0(as.character(as.integer(load.waste$address_number)), " ")), ifelse(is.na(load.waste$street), "", as.character(load.waste$street)), paste0(ifelse(is.na(load.waste$city) | load.waste$city == "", "", paste0(" ", as.character(load.waste$city), ", PA"))))
+# Build URL Link
+load.waste$link <- ifelse(load.waste$website == "", as.character(load.waste$name), paste0('<a href=', load.waste$website,'" target="_blank">', load.waste$name, '</a>'))
+
 load.waste$managed_by_city <- ifelse(load.waste@data$managed_by_city == 1, TRUE, FALSE)
 # Build Description
 load.waste$description <- ""
@@ -375,7 +378,7 @@ ui <- navbarPage(id = "navTab",
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("City Assets", "City Bridges", "City Steps", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals"),
+                                        choices = c("City Assets", "City Bridges", "City Steps", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"),
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -1158,6 +1161,13 @@ server <- shinyServer(function(input, output, session) {
       colnames(streets) <- c("Name", "Route Ahead", "Route Back", "Start Year", "Status")
       
       report <- streets
+    } else if (input$report_select == "Waste Recovery Sites") {
+      waste <- wasteInput()
+      
+      waste <- subset(waste@data, select = c(link, managed_by_city, address, hours_of_operation, phone_number, description, notes))
+      colnames(waste) <- c("Name","City Location" ,"Location", "Hours", "Phone #", "Description", "Notes")
+      
+      report <- waste
     } else if (input$report_select == "City Retaining Walls") {
       walls <- wallsInput()
       
@@ -1234,6 +1244,17 @@ server <- shinyServer(function(input, output, session) {
                                            '</font>'))
         )
       }
+      # Playgrounds
+      playgrounds <- playgroundsInput()
+      if (nrow(playgrounds@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=playgrounds, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+                           popup = ~(paste(paste0('<center><img id="imgPicture" src="', playgrounds$image, '" style="width:250px;"></center>'),
+                                           "<font color='black'><b>Name:</b>", playgrounds$name,
+                                           "<br><b>Location:</b>", playgrounds$street,
+                                           "<br><b>Park:</b>", playgrounds$park, "</font>"))
+        )
+      }
       #Rec Facilities
       recfacilities <- recfacilitiesInput()
       if (nrow(recfacilities@data) > 0) {
@@ -1246,44 +1267,33 @@ server <- shinyServer(function(input, output, session) {
                                            "<br><b>Dept:</b>", recfacilities$primary_user,
                                            recfacilities$url, "</font>"))
           )
-        }
-        # Court & Rinks
-        courts <- courtsInput()
-        if(nrow(courts@data) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addPolygons(map, data=courts, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                             popup = ~(paste("<font color='black'><b>Name:</b>", courts$name,
-                                             "<br><b>Location:</b>", courts$park,
-                                             "<br><b>Type:</b>", courts$type,
-                                             "<br><b>Surface Material:</b>", courts$surface_material, 
-                                             "<br><b>Grandstands:</b>", courts$grandstand, "</font>"))
-          )
-        }
-        # Playing Fields
-        fields <- fieldsInput()
-        if (nrow(fields@data) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addPolygons(map, data=fields, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                             popup = ~(paste("<font color='black'><b>Name:</b>", fields$name,
-                                             "<br><b>Location:</b>", fields$park,
-                                             "<br><b>Type:</b>", fields$field_usage,
-                                             ifelse(fields$infield_type == "N/A", "", paste("<br><b>Infield Type:</b>", fields$infield_type)),
-                                             "<br><b>Lights:</b>", fields$has_lights,
-                                             ifelse(fields$goal_post == 0, "", paste("<br><b>Goal Posts:</b>", fields$goal_post)),
-                                             ifelse(fields$left_field_distance == "N/A", "", paste("<br><b>Left Field:</b>", fields$left_field_distance, "ft")),
-                                             ifelse(fields$CenterFieldDistanceField == "N/A", "", paste("<br><b>Center Field:</b>", fields$CenterFieldDistanceField, "ft")),
-                                             ifelse(fields$right_field_distance == "N/A", "", paste("<br><b>Right Field:</b>", fields$right_field_distance, "ft")), "</font>"))
-            )
-        }
-        # Playgrounds
-        playgrounds <- playgroundsInput()
-        if (nrow(playgrounds@data) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addPolygons(map, data=playgrounds, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                             popup = ~(paste(paste0('<center><img id="imgPicture" src="', playgrounds$image, '" style="width:250px;"></center>'),
-                                             "<font color='black'><b>Name:</b>", playgrounds$name,
-                                             "<br><b>Location:</b>", playgrounds$street,
-                                             "<br><b>Park:</b>", playgrounds$park, "</font>"))
+      }
+      # Court & Rinks
+      courts <- courtsInput()
+      if(nrow(courts@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=courts, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+                           popup = ~(paste("<font color='black'><b>Name:</b>", courts$name,
+                                           "<br><b>Location:</b>", courts$park,
+                                           "<br><b>Type:</b>", courts$type,
+                                           "<br><b>Surface Material:</b>", courts$surface_material, 
+                                           "<br><b>Grandstands:</b>", courts$grandstand, "</font>"))
+        )
+      }
+      # Playing Fields
+      fields <- fieldsInput()
+      if (nrow(fields@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=fields, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+                           popup = ~(paste("<font color='black'><b>Name:</b>", fields$name,
+                                           "<br><b>Location:</b>", fields$park,
+                                           "<br><b>Type:</b>", fields$field_usage,
+                                           ifelse(fields$infield_type == "N/A", "", paste("<br><b>Infield Type:</b>", fields$infield_type)),
+                                           "<br><b>Lights:</b>", fields$has_lights,
+                                           ifelse(fields$goal_post == 0, "", paste("<br><b>Goal Posts:</b>", fields$goal_post)),
+                                           ifelse(fields$left_field_distance == "N/A", "", paste("<br><b>Left Field:</b>", fields$left_field_distance, "ft")),
+                                           ifelse(fields$CenterFieldDistanceField == "N/A", "", paste("<br><b>Center Field:</b>", fields$CenterFieldDistanceField, "ft")),
+                                           ifelse(fields$right_field_distance == "N/A", "", paste("<br><b>Right Field:</b>", fields$right_field_distance, "ft")), "</font>"))
           )
         }
       }
@@ -1360,7 +1370,7 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(waste) > 0) {
         assetsCount <- assetsCount + 1
         map <- addCircleMarkers(map, data=waste, color = "#79db39", fillColor = "#79db39", fillOpacity = .5, radius = 8,
-                                popup = ~(paste("<font color='black'><b>Name:</b>", ifelse(waste$website == "", as.character(waste$name), paste0('<a href=', waste$website,'">', waste$name, '</a>')),
+                                popup = ~(paste("<font color='black'><b>Name:</b>", waste$link,
                                                 "<br><b>City Location:</b>", waste$managed_by_city,
                                                 "<br><b>Location:</b>", waste$address,
                                                 "<br><b>Phone:</b>", waste$phone_number,
