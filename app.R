@@ -207,7 +207,7 @@ ft_min <- min(c(load.steps$length, load.walls$length), na.rm = TRUE)
 load.streets <- ckanGEO("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson")
 
 # Waste Material Types
-materials <- as.factor(c("Computers and Peripherals", "TVs and Monitors", "Alkaline Batteries", "Household Chemicals and Waste", "Clothing", "Small Business Recyclables", "Plastic Bags and Films", "Household Recyclables", "CFL Lightbulbs", "Automotive Batteries", "Freon Appliances", "Fluorescent Tube Lightbulbs", "Prescription Medication", "Collectibles", "Tires"))
+materials <- as.factor(c("Computers and Peripherals", "TVs and Monitors", "Alkaline Batteries", "Household Chemicals and Waste", "Clothing", "Small Business Recyclables", "Plastic Bags and Films", "Household Recyclables", "CFL Lightbulbs", "Automotive Batteries", "Freon Appliances", "Fluorescent Tube Lightbulbs", "Prescription Medication", "Collectibles", "Tires", "Propane Tanks"))
 
 # Load Waste Recovery Sites
 load.waste <- ckanGEO("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
