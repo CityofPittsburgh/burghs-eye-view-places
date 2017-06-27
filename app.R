@@ -214,7 +214,7 @@ load.waste <- ckanGEO("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-de
 #Build Address
 load.waste$address <- paste0(ifelse(is.na(load.waste$address_number), "", paste0(as.character(as.integer(load.waste$address_number)), " ")), ifelse(is.na(load.waste$street), "", as.character(load.waste$street)), paste0(ifelse(is.na(load.waste$city) | load.waste$city == "", "", paste0(" ", as.character(load.waste$city), ", PA"))))
 # Build URL Link
-load.waste$link <- ifelse(load.waste$website == "", as.character(load.waste$name), paste0('<a href=', load.waste$website,'" target="_blank">', load.waste$name, '</a>'))
+load.waste$link <- ifelse(load.waste$website == "", as.character(load.waste$name), paste0('<a href=', load.waste$website,' target="_blank">', load.waste$name, '</a>'))
 
 load.waste$managed_by_city <- ifelse(load.waste@data$managed_by_city == 1, TRUE, FALSE)
 # Build Description
@@ -540,7 +540,7 @@ server <- shinyServer(function(input, output, session) {
                                 c(`Water Category`='', sort(unique(c(levels(load.pools$type) ,levels(load.poolsfacilities@data$usage), levels(load.spray$feature_type))))),
                                 multiple = TRUE,
                                 selectize = TRUE),
-                    HTML('<font color="#79db39">'),
+                    HTML('<font color="#099fff">'),
                     checkboxInput("toggleWaste",
                                   label = "Waste Recovery Sites",
                                   value = TRUE),
@@ -686,7 +686,7 @@ server <- shinyServer(function(input, output, session) {
                                             c(`Water Category`='', sort(unique(c(levels(load.pools$type) ,levels(load.poolsfacilities@data$usage), levels(load.spray$feature_type))))),
                                             multiple = TRUE,
                                             selectize = TRUE),
-                                HTML('<font color="#79db39">'),
+                                HTML('<font color="#099fff">'),
                                 checkboxInput("toggleWaste",
                                               label = "Waste Recovery Sites",
                                               value = TRUE),
@@ -1369,7 +1369,7 @@ server <- shinyServer(function(input, output, session) {
       waste <- wasteInput()
       if (nrow(waste) > 0) {
         assetsCount <- assetsCount + 1
-        map <- addCircleMarkers(map, data=waste, color = "#79db39", fillColor = "#79db39", fillOpacity = .5, radius = 8,
+        map <- addCircleMarkers(map, data=waste, color = "#099fff", fillColor = "#099fff", fillOpacity = .5, radius = 8,
                                 popup = ~(paste("<font color='black'><b>Name:</b>", waste$link,
                                                 "<br><b>City Location:</b>", waste$managed_by_city,
                                                 "<br><b>Location:</b>", waste$address,
