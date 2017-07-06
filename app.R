@@ -288,7 +288,7 @@ if(Sys.Date() <= as.Date(paste0(this_year,"-10-31")) & Sys.Date() >= as.Date(pas
   load.egg$icon <- "easter_egg"
   load.egg$tt <- "<i>You couldn't find any results, but maybe you can find my eggs.</i>"
 } else if (Sys.Date() >= as.Date(paste0(this_year,"-07-01")) & Sys.Date() <= as.Date(paste0(this_year,"-07-07"))) {
-  load.egg <- read.csv("boundaries/Parks/parks.csv")
+  load.egg <- read.csv("parks.csv")
   load.egg$icon <- "july_4"
   load.egg$tt <- "<i>Happy Independence Day! Looks like you need to try another search term.</i>"
 } else if (Sys.Date() >= as.Date(paste0(this_year,"-05-01")) & Sys.Date() <= as.Date(paste0(this_year,"-08-31"))) {
@@ -372,13 +372,13 @@ ui <- navbarPage(id = "navTab",
                                      }"),
                           uiOutput("placesPanel")
                  ),
-                 # tabPanel(a("Parcels", href="https://pittsburghpa.shinyapps.io/BurghsEyeViewParcels/", style = "padding-top: 0px; padding-bottom: 0px; bottom: 19; top: -19; bottom: 19px")),
+                 tabPanel(a("Parcels", href="https://pittsburghpa.shinyapps.io/BurghsEyeViewParcels/", style = "padding-top: 0px; padding-bottom: 0px; bottom: 19; top: -19; bottom: 19px")),
                  tabPanel('Data: Places', id = "Data: Places", value = "Data: Places",
                           # Select Dataset for Export
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("City Assets", "City Bridges", "City Steps", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"),
+                                        choices = c("City Assets", "City Bridges", "City Steps", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -544,12 +544,12 @@ server <- shinyServer(function(input, output, session) {
                     checkboxInput("toggleWaste",
                                   label = "Waste Recovery Sites",
                                   value = TRUE),
+                    HTML('</font>'),
                     selectInput("materials_select",
                                 label = NULL,
                                 c(`Accepted Materials` ='', levels(materials)),
-                                  multiple = TRUE,
-                                  selectize = TRUE),
-                    HTML('</font>'),
+                                multiple = TRUE,
+                                selectize = TRUE),
                     HTML('<font color="#984ea3">'),
                     checkboxInput("toggleEconomic",
                                   label = "Economic",
@@ -588,7 +588,7 @@ server <- shinyServer(function(input, output, session) {
                     selectInput("basemap_select",
                                 label = "Basemap",
                                 choices = c(`OSM Mapnik` = "OpenStreetMap.Mapnik", `OSM France` = "OpenStreetMap.France", `OSM Humanitarian` = "OpenStreetMap.HOT", `Stamen Toner` = "Stamen.Toner", `Esri Satellite` = "Esri.WorldImagery", Esri = "Esri.WorldStreetMap", Pioneer = "Thunderforest.Pioneer"),
-                                selected = ifelse(Sys.Date() == as.Date(paste0(this_year,"-07-06")) | Sys.Date() == as.Date(paste0(this_year,"-08-31")), "Thunderforest.Pioneer", "OpenStreetMap.Mapnik"))
+                                selected = ifelse(Sys.Date() == as.Date(paste0(this_year,"-07-15")) | Sys.Date() == as.Date(paste0(this_year,"-08-31")), "Thunderforest.Pioneer", "OpenStreetMap.Mapnik"))
           ), style = "opacity: 0.88"
         )
       )
@@ -690,12 +690,12 @@ server <- shinyServer(function(input, output, session) {
                                 checkboxInput("toggleWaste",
                                               label = "Waste Recovery Sites",
                                               value = TRUE),
+                                HTML('</font>'),    
                                 selectInput("materials_select",
                                             label = NULL,
                                             c(`Accepted Materials` ='', levels(materials)),
                                             multiple = TRUE,
                                             selectize = TRUE),
-                                HTML('</font>'),           
                                 HTML('<font color="#984ea3">'),
                                 checkboxInput("toggleEconomic",
                                               label = "Economic",
