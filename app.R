@@ -207,7 +207,7 @@ ft_min <- min(c(load.steps$length, load.walls$length), na.rm = TRUE)
 load.streets <- ckanGEO("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson")
 
 # Waste Material Types
-materials <- as.factor(c("Computers and Peripherals", "TVs and Monitors", "Alkaline Batteries", "Household Chemicals and Waste", "Clothing", "Small Business Recyclables", "Plastic Bags and Films", "Household Recyclables", "CFL Lightbulbs", "Automotive Batteries", "Freon Appliances", "Fluorescent Tube Lightbulbs", "Prescription Medication", "Collectibles", "Tires", "Propane Tanks"))
+materials <- as.factor(c("Alkaline Batteries", "Automotive Batteries", "Cell Phones", "CFL Lightbulbs", "Clothing", "Collectibles", "Computers and Peripherals", "Construction and Demolition Waste", "Fluorescent Tube Lightbulbs", "Freon Appliances", "General Electronics", "Household Chemicals and Waste", "Household Recyclables", "Ink and Toner", "Motor Oil", "Plastic Bags and Films", "Prescription Medication", "Propane Tanks", "Rechargeable Batteries", "Scrap Metal", "Small Business Recyclables", "Tires", "TVs and Monitors", "Yard Debris"))
 
 # Load Waste Recovery Sites
 load.waste <- ckanGEO("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
@@ -221,6 +221,7 @@ load.waste$managed_by_city <- ifelse(load.waste@data$managed_by_city == 1, TRUE,
 load.waste$description <- ""
 for (i in levels(materials)) {
   col <- gsub(" ", "_", paste("accepts", tolower(i)))
+  print(col)
   load.waste$description <- case_when(
     load.waste@data[,col] == 1 & load.waste$description == "" ~ i,
     load.waste@data[,col] == 1 & load.waste$description != "" ~ paste(load.waste$description, i, sep = ", "),
