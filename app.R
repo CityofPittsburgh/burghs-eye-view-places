@@ -221,7 +221,6 @@ load.waste$managed_by_city <- ifelse(load.waste@data$managed_by_city == 1, TRUE,
 load.waste$description <- ""
 for (i in levels(materials)) {
   col <- gsub(" ", "_", paste("accepts", tolower(i)))
-  print(col)
   load.waste$description <- case_when(
     load.waste@data[,col] == 1 & load.waste$description == "" ~ i,
     load.waste@data[,col] == 1 & load.waste$description != "" ~ paste(load.waste$description, i, sep = ", "),
