@@ -106,6 +106,9 @@ load.facilities@data$usage <- as.factor(load.facilities@data$usage)
 load.bridges <- ckanGEO("https://data.wprdc.org/dataset/d6e6c012-45f0-4e13-ab3b-9458fd56ad96/resource/c972b2cc-8396-4cd0-80d6-3051497da903/download/bridgesimg.geojson")
 
 # Load Recreation
+# Load Parks
+load.parks <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/e95593cb0a2d4ff194be9694b40614dc_0.geojson", what = "sp")
+
 # Load Greenways
 load.greenways <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/dcef4d943c1b44129b967d97def9e8c4_0.geojson", what = "sp")
 load.greenways@data$layer <- "Greenway"
@@ -378,7 +381,7 @@ ui <- navbarPage(id = "navTab",
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("City Assets", "City Bridges", "City Steps", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
+                                        choices = c("City Assets", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -453,6 +456,7 @@ server <- shinyServer(function(input, output, session) {
   # City Map UI
   output$placesPanel <- renderUI({
     # UI for Desktop Users
+    # if (FALSE) {
     if (as.numeric(input$GetScreenWidth) > 800) {
       tagList(
         # Generate Map
@@ -511,7 +515,7 @@ server <- shinyServer(function(input, output, session) {
                     HTML('</font>'),
                     selectInput("recreation_select",
                                 label= NULL,
-                                c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts@data$type), levels(load.fields@data$field_usage), levels(load.recfacilities@data$usage), "Playground"))),
+                                c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts@data$type), levels(load.fields@data$field_usage), levels(load.recfacilities@data$usage), levels(load.parks$final_cat), "Playground"))),
                                 multiple = TRUE,
                                 selectize = TRUE),
                     HTML('<font color="#f781bf">'),
@@ -657,7 +661,7 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('</font>'),
                                 selectInput("recreation_select",
                                             label= NULL,
-                                            c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts@data$type), levels(load.fields@data$field_usage), levels(load.recfacilities@data$usage), "Playground"))),
+                                            c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts@data$type), levels(load.fields@data$field_usage), levels(load.recfacilities@data$usage), levels(load.parks$final_cat), "Playground"))),
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 HTML('<font color="#f781bf">'),
@@ -690,7 +694,7 @@ server <- shinyServer(function(input, output, session) {
                                 checkboxInput("toggleWaste",
                                               label = "Waste Recovery Sites",
                                               value = TRUE),
-                                HTML('</font>'),    
+                                HTML('</font>'),
                                 selectInput("materials_select",
                                             label = NULL,
                                             c(`Accepted Materials` ='', levels(materials)),
@@ -955,6 +959,21 @@ server <- shinyServer(function(input, output, session) {
     
     return(recfacilities)
   })
+  parksInput <- reactive({
+    parks <- load.parks
+    
+    # Usage Filter
+    if (length(input$recreation_select) > 0) {
+      parks <- parks[parks@data$final_cat %in% input$recreation_select,]
+    }
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      parks <- parks[apply(parks@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(parks)
+  })
   greenwaysInput <- reactive({
     greenways <- load.greenways
     
@@ -1102,6 +1121,13 @@ server <- shinyServer(function(input, output, session) {
       colnames(steps) <- c("Name", "Length (feet)", "Year Installed")
       
       report <- steps
+    } else if (input$report_select == "City Parks") {
+      parks <- parksInput()
+      
+      parks <- subset(parks@data, select = c(updatepknm, final_cat, maintenanceresponsibility))
+      colnames(parks) <- c("Name", "Type", "Maintenance")
+      
+      report <- parks
     } else if (input$report_select == "Playgrounds") {
       playgrounds <- playgroundsInput()
       
@@ -1235,10 +1261,20 @@ server <- shinyServer(function(input, output, session) {
     }
     # Recreation Layers
     if (input$toggleRecreation) {
+      parks <- parksInput()
+      if (nrow(parks@data) > 0) {
+        assetsCount <- assetsCount + 1
+        map <- addPolygons(map, data=parks, color = "#4daf4a",
+                           popup = ~(paste("<font color='black'><b>Name:</b>", parks$updatepknm,
+                                           "<br><b>Type:</b>", parks$final_cat,
+                                           ifelse(parks$maintenanceresponsibility == "", "", paste0("<br><b>Maintenance: </b>", parks$maintenanceresponsibility)
+                                           )))
+        )
+      }
       greenways <- greenwaysInput()
       if (nrow(greenways@data) > 0) {
         assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=greenways, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
+        map <- addPolygons(map, data=greenways, color = "#4daf4a",
                            popup = ~(paste("<font color='black'><b>Type:</b>", greenways$layer,
                                            ifelse(is.na(greenways$name), "", paste("<br><b>Name:</b>", greenways$name)),
                                            '</font>'))
