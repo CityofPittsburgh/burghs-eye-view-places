@@ -203,6 +203,7 @@ load.steps@data$installed<-  as.numeric(format(as.Date(load.steps@data$installed
 
 # Load Retaining Walls
 load.walls <- ckanGEO("https://data.wprdc.org/dataset/5e77546c-f1e1-432a-b556-9ccf29db9b2c/resource/b126d855-d283-4875-aa29-3180099090ec/download/retainingwallsimg.geojson")
+load.walls$image <- as.character(load.walls$image)
 ft_max <- max(c(load.steps$length, load.walls$length), na.rm = TRUE)
 ft_min <- min(c(load.steps$length, load.walls$length), na.rm = TRUE)
 
@@ -547,7 +548,7 @@ server <- shinyServer(function(input, output, session) {
                     HTML('<font color="#099fff">'),
                     checkboxInput("toggleWaste",
                                   label = "Waste Recovery Sites",
-                                  value = TRUE),
+                                  value = FALSE),
                     HTML('</font>'),
                     selectInput("materials_select",
                                 label = NULL,
@@ -693,7 +694,7 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('<font color="#099fff">'),
                                 checkboxInput("toggleWaste",
                                               label = "Waste Recovery Sites",
-                                              value = TRUE),
+                                              value = FALSE),
                                 HTML('</font>'),
                                 selectInput("materials_select",
                                             label = NULL,
@@ -1285,7 +1286,7 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(playgrounds@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolygons(map, data=playgrounds, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                           popup = ~(paste(paste0('<center><img id="imgPicture" src="', playgrounds$image, '" style="width:250px;"></center>'),
+                           popup = ~(paste(ifelse(playgrounds$image == "", "" ,paste0('<center><img id="imgPicture" src="', playgrounds$image, '" style="width:250px;"></center>')),
                                            "<font color='black'><b>Name:</b>", playgrounds$name,
                                            "<br><b>Location:</b>", playgrounds$street,
                                            "<br><b>Park:</b>", playgrounds$park, "</font>"))
@@ -1296,7 +1297,7 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(recfacilities@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolygons(map, data=recfacilities, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                           popup = ~(paste(paste0('<center><img id="imgPicture" src="', recfacilities$image,'" style="width:250px;"></center>'),
+                           popup = ~(paste(ifelse(recfacilities$image == "", "", paste0('<center><img id="imgPicture" src="', recfacilities$image,'" style="width:250px;"></center>')),
                                            "<font color='black'><b>Name:</b>", recfacilities$name,
                                            "<br><b>Location:</b>", recfacilities$address,
                                            "<br><b>Usage:</b>", recfacilities$usage,
@@ -1328,7 +1329,7 @@ server <- shinyServer(function(input, output, session) {
                                            "<br><b>Lights:</b>", fields$has_lights,
                                            ifelse(fields$goal_post == 0, "", paste("<br><b>Goal Posts:</b>", fields$goal_post)),
                                            ifelse(fields$left_field_distance == "N/A", "", paste("<br><b>Left Field:</b>", fields$left_field_distance, "ft")),
-                                           ifelse(fields$CenterFieldDistanceField == "N/A", "", paste("<br><b>Center Field:</b>", fields$CenterFieldDistanceField, "ft")),
+                                           ifelse(fields$center_field_distance == "N/A", "", paste("<br><b>Center Field:</b>", fields$center_field_distance, "ft")),
                                            ifelse(fields$right_field_distance == "N/A", "", paste("<br><b>Right Field:</b>", fields$right_field_distance, "ft")), "</font>"))
           )
         }
@@ -1339,7 +1340,7 @@ server <- shinyServer(function(input, output, session) {
         if (nrow(pools@data) > 0) {
           assetsCount <- assetsCount + 1
           map <- addPolygons(map, data=pools, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
-                             popup = ~(paste(paste0('<center><img id="imgPicture" src="', pools$image, '" style="width:250px;"></center>'),
+                             popup = ~(paste(ifelse(pools$image == "", "", paste0('<center><img id="imgPicture" src="', pools$image, '" style="width:250px;"></center>')),
                                              "<font color='black'><b>Name:</b>", pools$name,
                                              "<br><b>Usage:</b>", pools$type,
                                              "<br><b>Water Source:</b>", pools$water_source,
@@ -1350,7 +1351,7 @@ server <- shinyServer(function(input, output, session) {
         if (nrow(spray) > 0) {
           assetsCount <- assetsCount + 1
           map <- addCircleMarkers(map, data=spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, radius = 4,
-                                  popup = ~(paste(paste0('<center><img id="imgPicture" src="', spray$image,'" style="width:250px;"></center>'),
+                                  popup = ~(paste(ifelse(spray$image == "", "", paste0('<center><img id="imgPicture" src="', spray$image,'" style="width:250px;"></center>')),
                                                   "<font color='black'><b>Location:</b>", spray$name,
                                                   "<br><b>Usage:</b>", spray$feature_type,
                                                   ifelse(is.na(spray$make) | spray$make == "", "", paste("<br><b>Make:</b>", spray$make)),
@@ -1361,7 +1362,7 @@ server <- shinyServer(function(input, output, session) {
         if (nrow(poolsfacilities@data) > 0 ) {
           assetsCount <- assetsCount + 1
           map <- addPolygons(map, data=poolsfacilities, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
-                             popup = ~(paste(paste0('<center><img id="imgPicture" src="', poolsfacilities$image, '" style="width:250px;"></center>'),
+                             popup = ~(paste(ifelse(poolsfacilities$image == "", "", paste0('<center><img id="imgPicture" src="', poolsfacilities$image, '" style="width:250px;"></center>')),
                                              "<font color='black'><b>Name:</b>", poolsfacilities$name,
                                              "<br><b>Location:</b>", poolsfacilities$address,
                                              "<br><b>Usage:</b>", poolsfacilities$usage,
@@ -1422,8 +1423,10 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(bridges@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 0.75,
-                            popup = ~(paste(paste0('<center><img id="imgPicture" src="', bridges$image,'" style="width:250px;"></center>'),
+                            popup = ~(paste(ifelse(bridges$image == "", "", paste0('<center><img id="imgPicture" src="', bridges$image,'" style="width:250px;"></center>')),
                                             "<font color='black'><b>Name:</b>", bridges$name, 
+                                            ifelse(is.na(bridges$year_built), "", paste("<br><b>Year Built:</b>", bridges$year_built)),
+                                            ifelse(is.na(bridges$year_rehab), "", paste("<br><b>Year last rehab:</b>", bridges$year_rehab)),
                                             "<br><b>Start Neighborhood:</b>", bridges$start_neighborhood,
                                             ifelse(is.na(bridges$end_neighborhood), "", paste( "<br><b>End Neighborhood:</b>", bridges$end_neighborhood)), "</font>"))
         )    
@@ -1435,7 +1438,7 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(steps@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolylines(map, data=steps, color = "#f781bf", opacity = 0.75,
-                                popup = ~(paste(paste0('<center><img id="imgPicture" src="', steps$image,'" style="width:250px;"></center>'),
+                                popup = ~(paste(ifelse(steps$image == "", "", paste0('<center><img id="imgPicture" src="', steps$image,'" style="width:250px;"></center>')),
                                                 "<font color='black'><b>Location:</b>", steps$name,
                                                 ifelse(is.na(steps$length) | steps$length == 0, "", paste("<br><b>Length:</b>", steps$length, "ft")),
                                                 ifelse(is.na(steps$installed) | steps$installed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", steps$installed)),
@@ -1449,7 +1452,7 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(walls@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolylines(map, data=walls, color = "#43a1a1", opacity = 0.75,
-                            popup = ~(paste(paste0('<center><img id="imgPicture" src="', walls$image,'" style="width:250px;"></center>'),
+                            popup = ~(paste(ifelse(walls$image == "", "", paste0('<center><img id="imgPicture" src="', walls$image,'" style="width:250px;"></center>')),
                                             "<font color='black'><b>Location:</b>", walls$name,
                                             ifelse(is.na(walls$length) | walls$length == 0, "", paste("<br><b>Length:</b>", walls$length, "ft")),
                                             ifelse(is.na(walls$height) | walls$height == 0, "", paste("<br><b>Height:</b>", walls$height, "ft")),
@@ -1463,7 +1466,7 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(facilities@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolygons(map, data=facilities, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5,
-                           popup = ~(paste(paste0('<center><img id="imgPicture" src="', facilities$image,'" style="width:250px;"></center>'),
+                           popup = ~(paste(ifelse(facilities$image == "", "", paste0('<center><img id="imgPicture" src="', facilities$image,'" style="width:250px;"></center>')),
                                            "<font color='black'><b>Name:</b>", facilities$name,
                                            "<br><b>Location:</b>", facilities$address,
                                            "<br><b>Usage:</b>", facilities$usage,
@@ -1475,7 +1478,7 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(wf) > 0) {
         assetsCount <- assetsCount + 1
         map <- addCircleMarkers(map, data=wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, radius = 2,
-                                popup = ~(paste(paste0('<center><img id="imgPicture" src="', wf$image,'" style="width:250px;"></center>'),
+                                popup = ~(paste(ifelse(wf$image == "", "", paste0('<center><img id="imgPicture" src="', wf$image,'" style="width:250px;"></center>')),
                                                 "<font color='black'><b>Location:</b>", wf$name,
                                                 "<br><b>Feature Type:</b>", wf$feature_type,
                                                 ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
