@@ -12,6 +12,7 @@ External Burgh's Eye View displaying City Places such as; Facilities, Parks, Ste
 ### Collaborators:
 * Tara Matthews
 * Robert Burrack
+* Dee Jones
   
 ### Acknowledgements & Thanks
 This application was made possible by a wide number of individuals within and throughout the City of Pittsburgh. First, Laura Meixell for her leadership in seeing this application through to public release and beyond. To Former Chief of Police Cameron McLay for his commitment to Open Data and ensuring the Police are one of our biggest contributors. To Former Chief Innovation Officer for the City of Pittsburgh Debra Lam for her executive sponsorship. To Director Finance Paul Leger for his trasnformative leadership and vision. To our primary funder, the Heinz Endowements for their ongoing support. To all of our friends and family for their compassion and understanding through our late nights and frenzied mornings. To Mayor William Peduto for making the City of Pittsburgh a place where innovative work like this is possible. Finally to the Citizens of Pittsburgh for their generous support of this application since release and their feedback through the 32 Community Meetings our team was able to attend.
