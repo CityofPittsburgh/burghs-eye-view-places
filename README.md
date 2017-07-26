@@ -1,4 +1,5 @@
 # Burghs Eye View Places
+<p align="center"><img src="http://apps.pittsburghpa.gov/cis/burgh-seye-icon.png"></p>
 External Burgh's Eye View displaying City Places such as; Facilities, Parks, Steps, Bridges, Playgrounds and Pools.
 
 ## Introduction 
