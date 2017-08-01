@@ -85,6 +85,7 @@ load.facilities@data <- transform(load.facilities@data, usage = as.factor(mapval
 # Create Tooltip
 load.facilities@data$rentable <- as.factor(load.facilities@data$rentable)
 load.facilities@data$url <- ifelse(load.facilities@data$rentable == 1, '<br><center><a href="https://registerparks.pittsburghpa.gov/" target="_blank">Rent this facility</a></center>', "")
+load.facilities@data$rentable <- ifelse(load.facilities@data$rentable == 1, "Yes", "No")
 
 load.facilities <- load.facilities[load.facilities$inactive == 0,]
 load.facilities@data$usage <-as.character(load.facilities@data$usage)
