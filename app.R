@@ -434,13 +434,6 @@ server <- shinyServer(function(input, output, session) {
   observe({
     # Trigger this observer every time an input changes
     reactiveValuesToList(input)
-    # Connect to Couch DB
-    if (length(reactiveValuesToList(input)) > 0) {
-      dateTime <- Sys.time()
-      names(dateTime) <- "dateTime"
-      couchDB$dataList <- c(reactiveValuesToList(input), sessionID, dateTime, sessionStart)
-      cdbAddDoc(couchDB)
-    }
     session$doBookmark()
   })
   # Update page URL
@@ -1496,6 +1489,13 @@ server <- shinyServer(function(input, output, session) {
       map <- addMarkers(map, data=egg, ~X, ~Y, icon = ~icons_egg[icon], popup = ~tt) %>% 
         setView(-79.9959, 40.4406, zoom = 10)
     }
+    #Write inputs to Couch
+    dateTime <- Sys.time()
+    names(dateTime) <- "dateTime"
+    inputs <- isolate(reactiveValuesToList(input))
+    couchDB$dataList <- c(inputs, sessionID, dateTime, sessionStart)
+    cdbAddDoc(couchDB)
+    #Generate Map
     map
   })
 })
