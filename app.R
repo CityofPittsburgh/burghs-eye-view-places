@@ -1490,11 +1490,13 @@ server <- shinyServer(function(input, output, session) {
         setView(-79.9959, 40.4406, zoom = 10)
     }
     #Write inputs to Couch
-    dateTime <- Sys.time()
-    names(dateTime) <- "dateTime"
-    inputs <- isolate(reactiveValuesToList(input))
-    couchDB$dataList <- c(inputs, sessionID, dateTime, sessionStart)
-    cdbAddDoc(couchDB)
+    if (url.exists("webhost.pittsburghpa.gov:5984/_utils/")){
+      dateTime <- Sys.time()
+      names(dateTime) <- "dateTime"
+      inputs <- isolate(reactiveValuesToList(input))
+      couchDB$dataList <- c(inputs, sessionID, dateTime, sessionStart)
+      cdbAddDoc(couchDB)
+    }
     #Generate Map
     map
   })
