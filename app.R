@@ -1420,14 +1420,11 @@ server <- shinyServer(function(input, output, session) {
         if (nrow(libs) > 0) {
           assetsCount <- assetsCount + 1
           map <- addCircleMarkers(map, data=libs, color = "#b10dc9", fillColor = "#b10dc9", fillOpacity = .5, radius = 8,  ~Lon, ~Lat,
-                                  popup = ~(paste("<font color='black'><b>Name:</b>", libs$name,
-                                                  "<br><b>Address: ", libs$full_address,
-                                                  ifelse(is.na(libs$MonFriOpen_tt), "", paste0("<br><b>Mon-Fri Open: ", libs$MonFriOpen_tt)),
-                                                  ifelse(is.na(libs$MonFriClose_tt), "", paste0("<br><b>Mon-Fri Close: ", libs$MonFriClose_tt)),
-                                                  ifelse(is.na(libs$SaOpen_tt), "", paste0("<br><b>Mon-Fri Open: ", libs$SaOpen_tt)),
-                                                  ifelse(is.na(libs$SaClose_tt), "", paste0("<br><b>Mon-Fri Close: ", libs$SaClose_tt)),
-                                                  ifelse(is.na(libs$SuOpen_tt), "", paste0("<br><b>Mon-Fri Open: ", libs$SuOpen_tt)),
-                                                  ifelse(is.na(libs$SuClose_tt), "", paste0("<br><b>Mon-Fri Close: ", libs$SuClose_tt)),
+                                  popup = ~(paste("<font color='black'><b>Name:</b>", libs$Name,
+                                                  "<br><b>Address:</b> ", libs$full_address,
+                                                  ifelse(is.na(libs$MonFriOpen_tt), "<br><b>Mon-Fri:</b> Closed", paste0("<br><b>Mon-Fri:</b> ", libs$MonFriOpen_tt, " - ", libs$MonFriClose_tt)),
+                                                  ifelse(is.na(libs$SaOpen_tt), "<br><b>Saturday:</b> Closed", paste0("<br><b>Saturday:</b> ", libs$SaOpen_tt,  " - ", libs$SaClose_tt)),
+                                                  ifelse(is.na(libs$SuClose_tt), "<br><b>Sunday:</b> Closed", paste0("<br><b>Sunday:</b> ",  libs$SuOpen_tt, " - ", libs$SuClose_tt))
                                   ))
           )
         }
