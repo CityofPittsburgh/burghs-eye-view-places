@@ -233,6 +233,30 @@ for (i in levels(materials)) {
   )
 }
 
+# Load Libraries
+load.libs <- ckan("2ba0788a-2f35-43aa-a47c-89c75f55cf9d")
+load.libs$full_address <- paste(load.libs$Address, paste0(load.libs$City, ","), load.libs$State, load.libs$Zip4)
+# Clean Name Start
+load.libs$Name <- tolower(load.libs$Name)
+# Format Open TImes
+load.libs$MonFriOpen_tt <-format(load.libs$MoOpen, "%I:%M %p")
+load.libs$MonFriClose_tt <- format(load.libs$MoClose, "%I:%M %p")
+load.libs$SaOpen_tt <- format(load.libs$SaOpen, "%I:%M %p")
+load.libs$SaClose_tt <- format(load.libs$SaClose, "%I:%M %p")
+load.libs$SuOpen_tt <- format(load.libs$SuOpen, "%I:%M %p")
+load.libs$SuClose_tt <- format(load.libs$SuClose, "%I:%M %p")
+
+# Build URL Hyperlink
+load.libs$url_name <- gsub("\\(", "", load.libs$Name) 
+load.libs$url_name <- gsub("\\)", "", load.libs$url_name)
+load.libs$url_name <- gsub("\\&", "and", load.libs$url_name)
+load.libs$url_name <- gsub(" library", "", load.libs$url_name, ignore.case = T)
+load.libs$url_name <- gsub(" ", "-", load.libs$url_name)
+load.libs$url_name <- gsub("downtown-and-business", "downtown-business", load.libs$url_name)
+load.libs$url_name <- paste0("https://www.carnegielibrary.org/clp_location/", load.libs$url_name)
+#Clean Name Finish
+load.libs$Name <- toTitleCase(load.libs$Name)
+
 # CouchDB Connection
 # couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
 couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
@@ -513,6 +537,14 @@ server <- shinyServer(function(input, output, session) {
                                 c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts@data$type), levels(load.fields@data$field_usage), levels(load.recfacilities@data$usage), levels(load.parks$final_cat), "Playground"))),
                                 multiple = TRUE,
                                 selectize = TRUE),
+                    HTML('<font color="#b10dc9">'),
+                    checkboxInput("toggleLibs",
+                                  label = "Carnegie Libraries",
+                                  value = TRUE),
+                    HTML('</font>'),
+                    selectInput("open_select",
+                                label = NULL,
+                                c(`Open Time` = '', c("Open Now", "Weekdays", "Saturday", "Sunday"))),
                     HTML('<font color="#f781bf">'),
                     checkboxInput("toggleSteps",
                                   label = "City Steps",
@@ -549,7 +581,7 @@ server <- shinyServer(function(input, output, session) {
                                 c(`Accepted Materials` ='', levels(materials)),
                                 multiple = TRUE,
                                 selectize = TRUE),
-                    HTML('<font color="#984ea3">'),
+                    HTML('<font color="#85144b">'),
                     checkboxInput("toggleEconomic",
                                   label = "Economic",
                                   value = FALSE),
@@ -659,6 +691,11 @@ server <- shinyServer(function(input, output, session) {
                                             c(`Recreation Type` = '', sort(c("Greenway", levels(load.courts@data$type), levels(load.fields@data$field_usage), levels(load.recfacilities@data$usage), levels(load.parks$final_cat), "Playground"))),
                                             multiple = TRUE,
                                             selectize = TRUE),
+                                HTML('<font color="#b10dc9">'),
+                                checkboxInput("toggleLibs",
+                                              label = "Carnegie Libraries",
+                                              value = TRUE),
+                                HTML('</font>'),
                                 HTML('<font color="#f781bf">'),
                                 checkboxInput("toggleSteps",
                                               label = "City Steps",
@@ -695,7 +732,7 @@ server <- shinyServer(function(input, output, session) {
                                             c(`Accepted Materials` ='', levels(materials)),
                                             multiple = TRUE,
                                             selectize = TRUE),
-                                HTML('<font color="#984ea3">'),
+                                HTML('<font color="#85144b">'),
                                 checkboxInput("toggleEconomic",
                                               label = "Economic",
                                               value = FALSE),
@@ -803,7 +840,19 @@ server <- shinyServer(function(input, output, session) {
     
     return(si)
   })
-  
+  # Carnegie Libraries
+  libsInput <- reactive({
+    libs <- load.libs
+    
+    
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      libs <- libs[apply(libs@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(libs)
+  })
   # City Steps data with filters
   stepsInput <- reactive({
     steps <- load.steps
@@ -1235,7 +1284,7 @@ server <- shinyServer(function(input, output, session) {
       economic <- economicInput()
       if (nrow(economic@data) > 0) {
         assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=economic, color = "#984ea3", fillColor = "#984ea3", fillOpacity = .5,
+        map <- addPolygons(map, data=economic, color = "#85144b", fillColor = "#85144b", fillOpacity = .5,
                            popup = ~(paste("<font color='black'><b>Region:</b>", economic$layer,
                                            ifelse(is.na(economic$name), "", paste("<br><b>Name:</b>", economic$name)),
                                            '</font>'))
@@ -1362,6 +1411,24 @@ server <- shinyServer(function(input, output, session) {
                                              "<br><b>Usage:</b>", poolsfacilities$usage,
                                              "<br><b>Dept:</b>", poolsfacilities$primary_user,
                                              poolsfacilities$url, "</font>"))
+          )
+        }
+      }
+      # Carnegie Libraries
+      if (input$toggleLibs) {
+        libs <- libsInput()
+        if (nrow(libs) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addCircleMarkers(map, data=libs, color = "#b10dc9", fillColor = "#b10dc9", fillOpacity = .5, radius = 8,  ~Lon, ~Lat,
+                                  popup = ~(paste("<font color='black'><b>Name:</b>", libs$name,
+                                                  "<br><b>Address: ", libs$full_address,
+                                                  ifelse(is.na(libs$MonFriOpen_tt), "", paste0("<br><b>Mon-Fri Open: ", libs$MonFriOpen_tt)),
+                                                  ifelse(is.na(libs$MonFriClose_tt), "", paste0("<br><b>Mon-Fri Close: ", libs$MonFriClose_tt)),
+                                                  ifelse(is.na(libs$SaOpen_tt), "", paste0("<br><b>Mon-Fri Open: ", libs$SaOpen_tt)),
+                                                  ifelse(is.na(libs$SaClose_tt), "", paste0("<br><b>Mon-Fri Close: ", libs$SaClose_tt)),
+                                                  ifelse(is.na(libs$SuOpen_tt), "", paste0("<br><b>Mon-Fri Open: ", libs$SuOpen_tt)),
+                                                  ifelse(is.na(libs$SuClose_tt), "", paste0("<br><b>Mon-Fri Close: ", libs$SuClose_tt)),
+                                  ))
           )
         }
       }
