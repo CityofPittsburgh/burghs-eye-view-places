@@ -234,25 +234,25 @@ for (i in levels(materials)) {
 }
 
 # Load Libraries
-load.libs <- ckan("2ba0788a-2f35-43aa-a47c-89c75f55cf9d")
+load.libs <- ckan("14babf3f-4932-4828-8b49-3c9a03bae6d0")
 load.libs$full_address <- paste(load.libs$Address, paste0(load.libs$City, ","), load.libs$State, load.libs$Zip4)
 # Clean Name Start
 load.libs$Name <- tolower(load.libs$Name)
 # Format Open/Close TImes
-load.libs$MoOpen <- as.POSIXct(format(load.libs$MoOpen, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$MoClose <- as.POSIXct(format(load.libs$MoClose, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$TuOpen<- as.POSIXct(format(load.libs$TuOpen, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$TuClose <- as.POSIXct(format(load.libs$TuClose, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$WeOpen<- as.POSIXct(format(load.libs$WeOpen, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$WeClose <- as.POSIXct(format(load.libs$WeClose, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$ThOpen<- as.POSIXct(format(load.libs$ThOpen, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$ThClose <- as.POSIXct(format(load.libs$ThClose, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$FrOpen<- as.POSIXct(format(load.libs$FrOpen, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$FrClose <- as.POSIXct(format(load.libs$FrClose, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$SaOpen<- as.POSIXct(format(load.libs$SaOpen, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$SaClose <- as.POSIXct(format(load.libs$SaClose, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$SuOpen<- as.POSIXct(format(load.libs$SuOpen, paste( Sys.Date(), "%H:%M:%S'")))
-load.libs$SuClose <- as.POSIXct(format(load.libs$SuClose, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$MoOpen <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$MoOpen)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$MoClose <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$MoClose)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$TuOpen <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$TuOpen)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$TuClose <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$TuClose)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$WeOpen <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$WeOpen)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$WeClose <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$WeClose)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$ThOpen <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$ThOpen)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$ThClose <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$ThClose)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$FrOpen <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$FrOpen)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$FrClose <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$FrClose)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$SaOpen <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$SaOpen)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$SaClose <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$SaClose)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$SuOpen <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$SuOpen)), format = "%Y-%m-%d %H:%M:%S")
+load.libs$SuClose <- as.POSIXct(paste(Sys.Date(), as.character(load.libs$SuClose)), format = "%Y-%m-%d %H:%M:%S")
 
 # Format Open/Close Tooltips
 load.libs$MoOpen_tt <-format(load.libs$MoOpen, "%I:%M %p")
