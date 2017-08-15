@@ -238,9 +238,17 @@ load.libs <- ckan("2ba0788a-2f35-43aa-a47c-89c75f55cf9d")
 load.libs$full_address <- paste(load.libs$Address, paste0(load.libs$City, ","), load.libs$State, load.libs$Zip4)
 # Clean Name Start
 load.libs$Name <- tolower(load.libs$Name)
-# Format Open TImes
-load.libs$MonFriOpen_tt <-format(load.libs$MoOpen, "%I:%M %p")
-load.libs$MonFriClose_tt <- format(load.libs$MoClose, "%I:%M %p")
+# Format Open/Close TImes
+load.libs$MoOpen<- as.POSIXct(format(load.libs$MoOpen, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$MoClose <- as.POSIXct(format(load.libs$MoClose, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$SaOpen<- as.POSIXct(format(load.libs$SaOpen, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$SaClose <- as.POSIXct(format(load.libs$SaClose, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$SuOpen<- as.POSIXct(format(load.libs$SuOpen, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$SuClose <- as.POSIXct(format(load.libs$SuClose, paste( Sys.Date(), "%H:%M:%S'")))
+
+# Format Open/Close Tooltips
+load.libs$MoFrOpen_tt <-format(load.libs$MoOpen, "%I:%M %p")
+load.libs$MoFrClose_tt <- format(load.libs$MoClose, "%I:%M %p")
 load.libs$SaOpen_tt <- format(load.libs$SaOpen, "%I:%M %p")
 load.libs$SaClose_tt <- format(load.libs$SaClose, "%I:%M %p")
 load.libs$SuOpen_tt <- format(load.libs$SuOpen, "%I:%M %p")
@@ -253,7 +261,7 @@ load.libs$url_name <- gsub("\\&", "and", load.libs$url_name)
 load.libs$url_name <- gsub(" library", "", load.libs$url_name, ignore.case = T)
 load.libs$url_name <- gsub(" ", "-", load.libs$url_name)
 load.libs$url_name <- gsub("downtown-and-business", "downtown-business", load.libs$url_name)
-load.libs$url_name <- paste0("https://www.carnegielibrary.org/clp_location/", load.libs$url_name)
+load.libs$url_name <- paste0("https://www.carnegielibrary.org/clp_location/", load.libs$url_name, "/")
 #Clean Name Finish
 load.libs$Name <- toTitleCase(load.libs$Name)
 
@@ -544,7 +552,7 @@ server <- shinyServer(function(input, output, session) {
                     HTML('</font>'),
                     selectInput("open_select",
                                 label = NULL,
-                                c(`Open Time` = '', c("Open Now", "Weekdays", "Saturday", "Sunday"))),
+                                c(`Open Days` = '', c("Open Now", "Weekdays", "Saturday", "Sunday"))),
                     HTML('<font color="#f781bf">'),
                     checkboxInput("toggleSteps",
                                   label = "City Steps",
@@ -843,8 +851,20 @@ server <- shinyServer(function(input, output, session) {
   # Carnegie Libraries
   libsInput <- reactive({
     libs <- load.libs
-    
-    
+
+    if (input$open_select == "Open Now" & format(Sys.Date(), "%A") %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")) {
+      libs <- subset(libs, Sys.time() > MoOpen & Sys.time() < MoClose)
+    } else if (input$open_select == "Open Now" & format(Sys.Date(), "%A") == "Saturday") {
+      libs <- subset(libs, Sys.time() > SaOpen & Sys.time() < SaClose)
+    } else if (input$open_select == "Open Now" & format(Sys.Date(), "%A") == "Sunday") {
+      libs <- subset(libs, Sys.time() > SuOpen & Sys.time() < SuClose)
+    } else if (input$open_select == "Weekdays") {
+      libs <- subset(libs, !is.na(MoClose))
+    } else if (input$open_select == "Saturday") {
+      libs <- subset(libs, !is.na(SaClose))
+    } else if (input$open_select == "Sunday") {
+      libs <- subset(libs, !is.na(SuClose))
+    }
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
@@ -1420,9 +1440,10 @@ server <- shinyServer(function(input, output, session) {
         if (nrow(libs) > 0) {
           assetsCount <- assetsCount + 1
           map <- addCircleMarkers(map, data=libs, color = "#b10dc9", fillColor = "#b10dc9", fillOpacity = .5, radius = 8,  ~Lon, ~Lat,
-                                  popup = ~(paste("<font color='black'><b>Name:</b>", libs$Name,
+                                  popup = ~(paste("<font color='black'><b>Name:</b> ", '<a href="', libs$url_name,'" target="_blank">', libs$Name, '</a>', 
                                                   "<br><b>Address:</b> ", libs$full_address,
-                                                  ifelse(is.na(libs$MonFriOpen_tt), "<br><b>Mon-Fri:</b> Closed", paste0("<br><b>Mon-Fri:</b> ", libs$MonFriOpen_tt, " - ", libs$MonFriClose_tt)),
+                                                  "<br><b>Phone:</b> ", libs$Phone,
+                                                  ifelse(is.na(libs$MoFrOpen_tt), "<br><b>Mon-Fri:</b> Closed", paste0("<br><b>Mon-Fri:</b> ", libs$MoFrOpen_tt, " - ", libs$MoFrClose_tt)),
                                                   ifelse(is.na(libs$SaOpen_tt), "<br><b>Saturday:</b> Closed", paste0("<br><b>Saturday:</b> ", libs$SaOpen_tt,  " - ", libs$SaClose_tt)),
                                                   ifelse(is.na(libs$SuClose_tt), "<br><b>Sunday:</b> Closed", paste0("<br><b>Sunday:</b> ",  libs$SuOpen_tt, " - ", libs$SuClose_tt))
                                   ))
