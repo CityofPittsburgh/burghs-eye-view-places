@@ -239,16 +239,32 @@ load.libs$full_address <- paste(load.libs$Address, paste0(load.libs$City, ","), 
 # Clean Name Start
 load.libs$Name <- tolower(load.libs$Name)
 # Format Open/Close TImes
-load.libs$MoOpen<- as.POSIXct(format(load.libs$MoOpen, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$MoOpen <- as.POSIXct(format(load.libs$MoOpen, paste( Sys.Date(), "%H:%M:%S'")))
 load.libs$MoClose <- as.POSIXct(format(load.libs$MoClose, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$TuOpen<- as.POSIXct(format(load.libs$TuOpen, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$TuClose <- as.POSIXct(format(load.libs$TuClose, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$WeOpen<- as.POSIXct(format(load.libs$WeOpen, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$WeClose <- as.POSIXct(format(load.libs$WeClose, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$ThOpen<- as.POSIXct(format(load.libs$ThOpen, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$ThClose <- as.POSIXct(format(load.libs$ThClose, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$FrOpen<- as.POSIXct(format(load.libs$FrOpen, paste( Sys.Date(), "%H:%M:%S'")))
+load.libs$FrClose <- as.POSIXct(format(load.libs$FrClose, paste( Sys.Date(), "%H:%M:%S'")))
 load.libs$SaOpen<- as.POSIXct(format(load.libs$SaOpen, paste( Sys.Date(), "%H:%M:%S'")))
 load.libs$SaClose <- as.POSIXct(format(load.libs$SaClose, paste( Sys.Date(), "%H:%M:%S'")))
 load.libs$SuOpen<- as.POSIXct(format(load.libs$SuOpen, paste( Sys.Date(), "%H:%M:%S'")))
 load.libs$SuClose <- as.POSIXct(format(load.libs$SuClose, paste( Sys.Date(), "%H:%M:%S'")))
 
 # Format Open/Close Tooltips
-load.libs$MoFrOpen_tt <-format(load.libs$MoOpen, "%I:%M %p")
-load.libs$MoFrClose_tt <- format(load.libs$MoClose, "%I:%M %p")
+load.libs$MoOpen_tt <-format(load.libs$MoOpen, "%I:%M %p")
+load.libs$MoClose_tt <- format(load.libs$MoClose, "%I:%M %p")
+load.libs$TuOpen_tt <-format(load.libs$TuOpen, "%I:%M %p")
+load.libs$TuClose_tt <- format(load.libs$TuClose, "%I:%M %p")
+load.libs$WeOpen_tt <-format(load.libs$WeOpen, "%I:%M %p")
+load.libs$WeClose_tt <- format(load.libs$WeClose, "%I:%M %p")
+load.libs$ThOpen_tt <-format(load.libs$ThOpen, "%I:%M %p")
+load.libs$ThClose_tt <- format(load.libs$ThClose, "%I:%M %p")
+load.libs$FrOpen_tt <-format(load.libs$FrOpen, "%I:%M %p")
+load.libs$FrClose_tt <- format(load.libs$FrClose, "%I:%M %p")
 load.libs$SaOpen_tt <- format(load.libs$SaOpen, "%I:%M %p")
 load.libs$SaClose_tt <- format(load.libs$SaClose, "%I:%M %p")
 load.libs$SuOpen_tt <- format(load.libs$SuOpen, "%I:%M %p")
@@ -264,10 +280,12 @@ load.libs$url_name <- gsub("downtown-and-business", "downtown-business", load.li
 load.libs$url_name <- paste0("https://www.carnegielibrary.org/clp_location/", load.libs$url_name, "/")
 #Clean Name Finish
 load.libs$Name <- toTitleCase(load.libs$Name)
+load.libs$Name <- gsub(" Library", "", load.libs$Name)
+load.libs$Name <- paste("CLP -", load.libs$Name)
 
 # CouchDB Connection
-# couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
-couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
+couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
+# couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
 # this_year
 this_year <- format(Sys.Date(), format="%Y")
@@ -415,7 +433,7 @@ ui <- navbarPage(id = "navTab",
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("Carnegie Libraries", "City Assets", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
+                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Assets", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -547,12 +565,12 @@ server <- shinyServer(function(input, output, session) {
                                 selectize = TRUE),
                     HTML('<font color="#b10dc9">'),
                     checkboxInput("toggleLibs",
-                                  label = "Carnegie Libraries",
+                                  label = "Carnegie Library of Pittsburgh Locations",
                                   value = TRUE),
                     HTML('</font>'),
                     selectInput("open_select",
                                 label = NULL,
-                                c(`Open Days` = '', c("Open Now", "Weekdays", "Saturday", "Sunday"))),
+                                c(`Open On` = '', c("Open Now", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))),
                     HTML('<font color="#f781bf">'),
                     checkboxInput("toggleSteps",
                                   label = "City Steps",
@@ -701,9 +719,12 @@ server <- shinyServer(function(input, output, session) {
                                             selectize = TRUE),
                                 HTML('<font color="#b10dc9">'),
                                 checkboxInput("toggleLibs",
-                                              label = "Carnegie Libraries",
+                                              label = "Carnegie Library of Pittsburgh Locations",
                                               value = TRUE),
                                 HTML('</font>'),
+                                selectInput("open_select",
+                                            label = NULL,
+                                            c(`Open On` = '', c("Open Now", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))),
                                 HTML('<font color="#f781bf">'),
                                 checkboxInput("toggleSteps",
                                               label = "City Steps",
@@ -848,23 +869,41 @@ server <- shinyServer(function(input, output, session) {
     
     return(si)
   })
-  # Carnegie Libraries
+  # Carnegie Library of Pittsburgh Locations
   libsInput <- reactive({
     libs <- load.libs
 
-    if (input$open_select == "Open Now" & format(Sys.Date(), "%A") %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")) {
-      libs <- subset(libs, Sys.time() > MoOpen & Sys.time() < MoClose)
-    } else if (input$open_select == "Open Now" & format(Sys.Date(), "%A") == "Saturday") {
-      libs <- subset(libs, Sys.time() > SaOpen & Sys.time() < SaClose)
-    } else if (input$open_select == "Open Now" & format(Sys.Date(), "%A") == "Sunday") {
-      libs <- subset(libs, Sys.time() > SuOpen & Sys.time() < SuClose)
-    } else if (input$open_select == "Weekdays") {
+    if (input$open_select == "Open Now") {
+      if (format(Sys.Date(), "%A") == "Monday") {
+        libs <- subset(libs, Sys.time() > MoOpen & Sys.time() < MoClose)
+      } else if (format(Sys.Date(), "%A") == "Tuesday") {
+        libs <- subset(libs, Sys.time() > TuOpen & Sys.time() < TuClose)
+      } else if (format(Sys.Date(), "%A") == "Wednesday") {
+        libs <- subset(libs, Sys.time() > WeOpen & Sys.time() < WeClose)
+      } else if (format(Sys.Date(), "%A") == "Thursday") {
+        libs <- subset(libs, Sys.time() > ThOpen & Sys.time() < ThClose)
+      } else if (format(Sys.Date(), "%A") == "Friday") {
+        libs <- subset(libs, Sys.time() > FrOpen & Sys.time() < FrClose)
+      } else if (format(Sys.Date(), "%A") == "Saturday") {
+        libs <- subset(libs, Sys.time() > SaOpen & Sys.time() < SaClose)
+      } else if  (format(Sys.Date(), "%A") == "Sunday") {
+        libs <- subset(libs, Sys.time() > SuOpen & Sys.time() < SuClose)
+      } 
+    } else if (input$open_select == "Monday") {
       libs <- subset(libs, !is.na(MoClose))
+    } else if (input$open_select == "Tuesday") {
+      libs <- subset(libs, !is.na(TuClose))
+    } else if (input$open_select == "Wednesday") {
+      libs <- subset(libs, !is.na(WeClose))
+    } else if (input$open_select == "Thursday") {
+      libs <- subset(libs, !is.na(ThClose))
+    } else if (input$open_select == "Friday") {
+      libs <- subset(libs, !is.na(FrClose))
     } else if (input$open_select == "Saturday") {
       libs <- subset(libs, !is.na(SaClose))
-    } else if (input$open_select == "Sunday") {
+    } else if  (input$open_select == "Sunday") {
       libs <- subset(libs, !is.na(SuClose))
-    }
+    } 
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
@@ -1164,11 +1203,11 @@ server <- shinyServer(function(input, output, session) {
       colnames(wf) <- c("Usage", "Description", "Dept", "Location")
       
       report <- rbind(facilities, wf)
-    } else if (input$report_select == "Carnegie Libraries") {
+    } else if (input$report_select == "Carnegie Library of Pittsburgh Locations") {
       libs <- libsInput()
       
-      libs <- subset(libs, select = c(Name, full_address, Phone, MoFrOpen_tt, MoFrClose_tt, SaOpen_tt, SaClose_tt, SuOpen_tt, SuClose_tt))
-      colnames(libs) <- c("Name", "Address", "Phone", "Mon-Fri Open", "Mo-Fri Close", "Sat Open", "Sat Close", "Sun Open", "Sun Close")
+      libs <- subset(libs, select = c(Name, full_address, Phone, MoOpen_tt, MoClose_tt, TuOpen_tt, TuClose_tt, WeOpen_tt, WeClose_tt, ThOpen_tt, ThClose_tt,  FrOpen_tt, FrClose_tt, SaOpen_tt, SaClose_tt, SuOpen_tt, SuClose_tt))
+      colnames(libs) <- c("Name", "Address", "Phone", "Mon Open", "Mon Close", "Tue Open", "Tue Close", "Wed Open", "Wed Close", "Thu Open", "Thu Close", "Fri Open", "Fri Close", "Sat Open", "Sat Close", "Sun Open", "Sun Close")
       
       return(libs)
     } else if (input$report_select == "Recreation Facilities") {
@@ -1441,7 +1480,7 @@ server <- shinyServer(function(input, output, session) {
           )
         }
       }
-      # Carnegie Libraries
+      # Carnegie Library of Pittsburgh Locations
       if (input$toggleLibs) {
         libs <- libsInput()
         if (nrow(libs) > 0) {
@@ -1450,9 +1489,14 @@ server <- shinyServer(function(input, output, session) {
                                   popup = ~(paste("<font color='black'><b>Name:</b> ", '<a href="', libs$url_name,'" target="_blank">', libs$Name, '</a>', 
                                                   "<br><b>Address:</b> ", libs$full_address,
                                                   "<br><b>Phone:</b> ", libs$Phone,
-                                                  ifelse(is.na(libs$MoFrOpen_tt), "<br><b>Mon-Fri:</b> Closed", paste0("<br><b>Mon-Fri:</b> ", libs$MoFrOpen_tt, " - ", libs$MoFrClose_tt)),
-                                                  ifelse(is.na(libs$SaOpen_tt), "<br><b>Saturday:</b> Closed", paste0("<br><b>Saturday:</b> ", libs$SaOpen_tt,  " - ", libs$SaClose_tt)),
-                                                  ifelse(is.na(libs$SuClose_tt), "<br><b>Sunday:</b> Closed", paste0("<br><b>Sunday:</b> ",  libs$SuOpen_tt, " - ", libs$SuClose_tt))
+                                                  "<br><b>Hours:</b><br><ul>",
+                                                  ifelse(is.na(libs$MoOpen_tt), "<li><b>Mon:</b> Closed", paste0("<li><b>Mon:</b> ", libs$MoOpen_tt, " - ", libs$MoClose_tt)),
+                                                  ifelse(is.na(libs$TuOpen_tt), "<li><b>Tue:</b> Closed", paste0("<li><b>Tue:</b> ", libs$TuOpen_tt, " - ", libs$TuClose_tt)),
+                                                  ifelse(is.na(libs$WeOpen_tt), "<li><b>Wed:</b> Closed", paste0("<li><b>Wed:</b> ", libs$WeOpen_tt, " - ", libs$WeClose_tt)),
+                                                  ifelse(is.na(libs$ThOpen_tt), "<li><b>Thu:</b> Closed", paste0("<li><b>Thu:</b> ", libs$ThOpen_tt, " - ", libs$ThClose_tt)),
+                                                  ifelse(is.na(libs$FrOpen_tt), "<li><b>Fri:</b> Closed", paste0("<li><b>Fri:</b> ", libs$FrOpen_tt, " - ", libs$FrClose_tt)),
+                                                  ifelse(is.na(libs$SaOpen_tt), "<li><b>Sat:</b> Closed", paste0("<li><b>Sat:</b> ", libs$SaOpen_tt,  " - ", libs$SaClose_tt)),
+                                                  ifelse(is.na(libs$SuClose_tt), "<li><b>Sun:</b> Closed", paste0("<li><b>Sun:</b> ",  libs$SuOpen_tt, " - ", libs$SuClose_tt)), "</ul>"
                                   ))
           )
         }
