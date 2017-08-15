@@ -415,7 +415,7 @@ ui <- navbarPage(id = "navTab",
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("City Assets", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
+                                        choices = c("Carnegie Libraries", "City Assets", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -1164,6 +1164,13 @@ server <- shinyServer(function(input, output, session) {
       colnames(wf) <- c("Usage", "Description", "Dept", "Location")
       
       report <- rbind(facilities, wf)
+    } else if (input$report_select == "Carnegie Libraries") {
+      libs <- libsInput()
+      
+      libs <- subset(libs, select = c(Name, full_address, Phone, MoFrOpen_tt, MoFrClose_tt, SaOpen_tt, SaClose_tt, SuOpen_tt, SuClose_tt))
+      colnames(libs) <- c("Name", "Address", "Phone", "Mon-Fri Open", "Mo-Fri Close", "Sat Open", "Sat Close", "Sun Open", "Sun Close")
+      
+      return(libs)
     } else if (input$report_select == "Recreation Facilities") {
       recfacilities <- recfacilitiesInput()
       
