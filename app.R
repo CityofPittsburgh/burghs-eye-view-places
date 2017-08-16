@@ -284,8 +284,8 @@ load.libs$Name <- gsub(" Library", "", load.libs$Name)
 load.libs$Name <- paste("CLP -", load.libs$Name)
 
 # CouchDB Connection
-couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
-# couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
+# couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
+couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
 # this_year
 this_year <- format(Sys.Date(), format="%Y")
@@ -655,7 +655,7 @@ server <- shinyServer(function(input, output, session) {
         absolutePanel(top = 65, left = 0, width = '100%' ,
                       wellPanel(id = "tPanel", style ="padding-left: 5px; padding-right: 5px;",
                                 # Remove padding from Search Bar
-                                tags$style(type= "text/css", "#tPanel {margin-bottom:0px; padding:0px; overflow-y:scroll; max-height: calc(100vh - 60px); !important; min-height: 55px;}"),
+                                tags$style(type= "text/css", "#tPanel {margin-bottom:0px; padding:0px; overflow-y:scroll; max-height: calc(100vh - 60px); !important; height: 55px;}"),
                                 # Set background color to match panels
                                 tags$style(type = "text/css", "body {background-color: #ecf0f1}"),
                                 tags$style(type= "text/css", "{width:100%;
@@ -839,7 +839,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Feature Filter
     if (length(input$water_select) > 0) {
-      spray <- spray[spray@data$usage %in% input$water_select,]
+      spray <- spray[spray@data$feature_type %in% input$water_select,]
     }
     
     # Search Filter
