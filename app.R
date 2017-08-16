@@ -287,6 +287,9 @@ load.libs$Name <- paste("CLP -", load.libs$Name)
 # couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
 couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
+# Check for Aspect or Mobile Mode (FALSE Means Mobile Mode)
+checkMode <- TRUE
+
 # this_year
 this_year <- format(Sys.Date(), format="%Y")
 
@@ -418,7 +421,7 @@ ui <- navbarPage(id = "navTab",
                           tags$style(type="text/css", ".navbar-static-top {margin-bottom:0;}"),
                           tags$style(type="text/css", ".navbar-brand {height:60px; padding:0;}"),
                           tags$style(type="text/css", ".navbar {border-right-width: 20px;
-                                     border-left-width: 65px;}"),
+                                                                border-left-width: 65px;}"),
                           # Set max height for pop-ups
                           tags$style(type="text/css", ".leaflet-popup-content {overflow-y: auto; max-height: 400px !important;}"),
                           # Edit top bar
@@ -492,7 +495,7 @@ server <- shinyServer(function(input, output, session) {
   })
   output$buttonStyle <- renderUI({
     # Generate search & layer panel & Map (checks for mobile devices)
-    if (as.numeric(input$GetScreenWidth) > 800) {
+    if (as.numeric(input$GetScreenWidth) > 800 & checkMode) {
       div(style="margin-top: 20px", downloadButton("downloadData", paste("Export" , input$report_select), class = "dlBut"))
     } else {
       div(downloadButton("downloadData", paste("Export" , input$report_select), class = "dlBut"))
@@ -501,8 +504,7 @@ server <- shinyServer(function(input, output, session) {
   # City Map UI
   output$placesPanel <- renderUI({
     # UI for Desktop Users
-    # if (FALSE) {
-    if (as.numeric(input$GetScreenWidth) > 800) {
+    if (as.numeric(input$GetScreenWidth) > 800 & checkMode) {
       tagList(
         # Generate Map
         leafletOutput("map"),
@@ -655,7 +657,7 @@ server <- shinyServer(function(input, output, session) {
         absolutePanel(top = 65, left = 0, width = '100%' ,
                       wellPanel(id = "tPanel", style ="padding-left: 5px; padding-right: 5px;",
                                 # Remove padding from Search Bar
-                                tags$style(type= "text/css", "#tPanel {margin-bottom:0px; padding:0px; overflow-y:scroll; max-height: calc(100vh - 60px); !important; height: 55px;}"),
+                                tags$style(type= "text/css", "#tPanel {margin-bottom:0px; padding:0px; overflow-y:scroll; max-height: calc(100vh - 60px); !important; min-height: 55px;}"),
                                 # Set background color to match panels
                                 tags$style(type = "text/css", "body {background-color: #ecf0f1}"),
                                 tags$style(type= "text/css", "{width:100%;
@@ -666,15 +668,15 @@ server <- shinyServer(function(input, output, session) {
                                 # Div for Search Bar and Expansion
                                 HTML('<div id="outer" style="position:absolute;z-index: 9; background-color:#ecf0f1; width:100%;">'),
                                 # Set Searchvar width optimal for device
-                                tags$style(type = "text/css", paste0('#search {width: ', input$GetScreenWidth - 84, 'px; margin-left:10px;}')),
+                                tags$style(type = "text/css", paste0('#search {width: calc(100vw - 85px); margin-left:10px;}')),
                                 # Inputs
                                 div(style="display:inline-block;", 
                                     textInput("search", 
-                                              value =  "",
+                                              value = "",
                                               label = NULL, 
                                               placeholder = "Search")),
-                                tags$style(style="text/css", chartr0('#placePanel button .fa:before { content: "\\f056";  }
-                                                                     #placePanel button.collapsed .fa:before { content: "\\f055";  }')),
+                                tags$style(style="text/css", chartr0('#placesPanel #outer .btn .fa:before { content: "\\f056";  }
+                                                                     #placesPanel #outer .btn.collapsed .fa:before { content: "\\f055";  }')),
                                 HTML('<button class="btn collapsed" data-toggle="collapse" data-target="#mobile"><i class="fa fa-search-plus" aria-hidden="true"></i></button></div>
                                      <div id="mobile" class="collapse" style="margin-top:55px;">'),
                                 HTML('<font color="#ff7f00">'),
