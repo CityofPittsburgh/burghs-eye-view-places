@@ -42,6 +42,7 @@ options(scipen = 999)
 ckan_api <- jsonlite::fromJSON("key.json")$ckan_api
 couchdb_un <- jsonlite::fromJSON("key.json")$couchdb_un
 couchdb_pw <- jsonlite::fromJSON("key.json")$couchdb_pw
+couchdb_url <- jsonlite::fromJSON("key.json")$couchdb_url
 
 # Function to read backslashes correctly
 chartr0 <- function(foo) chartr('\\','\\/',foo)
@@ -284,8 +285,8 @@ load.libs$Name <- gsub(" Library", "", load.libs$Name)
 load.libs$Name <- paste("CLP -", load.libs$Name)
 
 # CouchDB Connection
-# couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
-couchDB <- cdbIni(serverName = "webhost.pittsburghpa.gov", uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
+# couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
+couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
 # Check for Aspect or Mobile Mode (FALSE Means Mobile Mode)
 checkMode <- TRUE
@@ -1628,7 +1629,7 @@ server <- shinyServer(function(input, output, session) {
         setView(-79.9959, 40.4406, zoom = 10)
     }
     #Write inputs to Couch
-    if (url.exists("webhost.pittsburghpa.gov:5984/_utils/")){
+    if (url.exists(paste0(couchdb_url, ":5984/_utils/"))){
       dateTime <- Sys.time()
       names(dateTime) <- "dateTime"
       inputs <- isolate(reactiveValuesToList(input))
