@@ -192,12 +192,19 @@ load.pools <- ckanGEO("https://data.wprdc.org/dataset/f7067c4e-0c1e-420c-8c31-f6
 
 # Load Signalized Intersections
 load.si <- ckanGEO("https://data.wprdc.org/dataset/f470a3d5-f5cb-4209-93a6-c974f7d5a0a4/resource/6eef551b-2dd3-4612-bced-33ec964667c5/download/siimg.geojson")
+# Clean
 load.si@data$description <- gsub("_", " ", load.si@data$description)
 load.si@data$description <- toTitleCase(tolower(load.si@data$description))
 load.si@data$description <- gsub("Osm", "OSM", load.si@data$description, ignore.case = TRUE)
 load.si@data$flash_yellow <- ifelse(is.na(load.si@data$flash_yellow), NA, toTitleCase(tolower(load.si@data$flash_yellow)))
+load.si@data$operation_type <- as.character(load.si@data$operation_type)
+load.si@data$operation_type <- paste("Traffic Signal -", load.si@data$operation_type)
+load.si@data$operation_type <- ifelse(load.si@data$operation_type == "Traffic Signal - ", "Traffic Signal - Other", load.si@data$operation_type)
 load.si@data$operation_type <- as.factor(load.si@data$operation_type)
 load.si@data$flash_time <- as.factor(load.si@data$flash_time)
+
+# Load Crosswalks
+load.cw <- ckanGEO("https://data.wprdc.org/dataset/31ce085b-87b9-4ffd-adbb-0a9f5b3cf3df/resource/f86f1950-3b73-46f9-8bd4-2991ea99d7c4/download/crosswalksimg.geojson")
 
 # Load City Steps
 load.steps <- ckanGEO("https://data.wprdc.org/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson")
@@ -437,7 +444,7 @@ ui <- navbarPage(id = "navTab",
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Assets", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
+                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Assets", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Crosswalks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -631,18 +638,18 @@ server <- shinyServer(function(input, output, session) {
                                 multiple = TRUE,
                                 selectize = TRUE),
                     HTML('<font color="#e41a1c">'),
-                    checkboxInput("toggleTraffic",
-                                  label = "Traffic Signals",
+                    checkboxInput("toggleIntersections",
+                                  label = "Intersections",
                                   value = FALSE),
                     HTML('</font>'),
-                    selectInput("operation_select",
+                    selectInput("intersection_select",
                                 label = NULL,
-                                c(`Operation Type` ='', levels(load.si$operation_type)),
+                                c(`Intersection Type` ='', sort(c(levels(load.cw$type), levels(load.si$operation_type)))),
                                 multiple = TRUE,
                                 selectize = TRUE),
                     selectInput("flash_select",
                                 label = NULL,
-                                c(`Flash Time` ='', levels(load.si$flash_time)),
+                                c(`Traffic Signal Flash Time` ='', levels(load.si$flash_time)),
                                 multiple = TRUE,
                                 selectize = TRUE),
                     selectInput("basemap_select",
@@ -785,18 +792,18 @@ server <- shinyServer(function(input, output, session) {
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 HTML('<font color="#e41a1c">'),
-                                checkboxInput("toggleTraffic",
-                                              label = "Traffic Signals",
+                                checkboxInput("toggleIntersections",
+                                              label = "Intersections",
                                               value = FALSE),
                                 HTML('</font>'),
-                                selectInput("operation_select",
+                                selectInput("intersection_select",
                                             label = NULL,
-                                            c(`Operation Type` ='', levels(load.si$operation_type)),
+                                            c(`Intersection Type` ='', sort(c(levels(load.cw$type), levels(load.si$operation_type)))),
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 selectInput("flash_select",
                                             label = NULL,
-                                            c(`Flash Time` ='', levels(load.si$flash_time)),
+                                            c(`Traffic Signal Flash Time` ='', levels(load.si$flash_time)),
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 selectInput("basemap_select",
@@ -857,8 +864,8 @@ server <- shinyServer(function(input, output, session) {
     si <- load.si
     
     # Operation Type Filter
-    if (length(input$operation_select) > 0) {
-      si <- si[si@data$operation_type %in% input$operation_select,]
+    if (length(input$intersection_select) > 0) {
+      si <- si[si@data$operation_type %in% input$intersection_select,]
     }
     # Flash Time Filter
     if (length(input$flash_select) > 0) {
@@ -871,6 +878,23 @@ server <- shinyServer(function(input, output, session) {
     }
     
     return(si)
+  })
+  # Cross Walks Data with Filters
+  cwInput <- reactive({
+    cw <- load.cw
+    
+    # Operation Type Filter
+    if (length(input$intersection_select) > 0) {
+      cw <- cw[cw@data$type %in% input$intersection_select,]
+    }
+
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      cw <- cw[apply(cw@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(cw)
+    
   })
   # Carnegie Library of Pittsburgh Locations
   libsInput <- reactive({
@@ -1293,6 +1317,13 @@ server <- shinyServer(function(input, output, session) {
       colnames(si) <- c("Location", "Operation Type", "Flash Time", "Flash Yellow")
       
       report <- si
+    } else if (input$report_select == "Crosswalks"){
+      cw <- cwInput()
+      
+      cw <- subset(cw@data, c(type, street))
+      colnames(cw) <- c("Type", "Street")
+    
+      report <- cw
     } else if (input$report_select == "Paving Schedule") {
       streets <- streetsInput()
       
@@ -1505,7 +1536,7 @@ server <- shinyServer(function(input, output, session) {
         }
       }
       # Traffic Signals
-      if (input$toggleTraffic) {
+      if (input$toggleIntersections) {
         si <- siInput()
         if (nrow(si) > 0) {
           assetsCount <- assetsCount + 1
@@ -1515,7 +1546,16 @@ server <- shinyServer(function(input, output, session) {
                                                        ifelse(is.na(si$flash_time), "", paste("<br><b>Flash Time:</b>", si$flash_time)),
                                                        ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
           )
-      }
+        }
+        # Crosswalks
+        cw <- cwInput()
+        if (nrow(cw) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addPolylines(map, data=cw, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5,
+                                  popup = ~(paste("<font color='black'><b>Type:</b>", cw$type,
+                                                  "<br><b>Location:</b>", cw$street, "</font>"))
+          )
+        }
     }
     # Paving Schedule
     if (input$toggleStreets) {
