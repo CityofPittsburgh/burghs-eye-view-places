@@ -191,7 +191,7 @@ load.wf@data$feature_type <- as.factor(load.wf@data$feature_type)
 load.pools <- ckanGEO("https://data.wprdc.org/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson")
 
 # Load Signalized Intersections
-load.si <- ckanGEO("https://data.wprdc.org/dataset/f470a3d5-f5cb-4209-93a6-c974f7d5a0a4/resource/6eef551b-2dd3-4612-bced-33ec964667c5/download/siimg.geojson")
+load.si <- ckanGEO("https://data.wprdc.org/dataset/f470a3d5-f5cb-4209-93a6-c974f7d5a0a4/resource/82ce557f-2388-489f-87e0-0d9d052633c4/download/siimg.geojson")
 # Clean
 load.si@data$description <- gsub("_", " ", load.si@data$description)
 load.si@data$description <- toTitleCase(tolower(load.si@data$description))
