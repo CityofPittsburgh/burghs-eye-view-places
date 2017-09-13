@@ -1320,7 +1320,7 @@ server <- shinyServer(function(input, output, session) {
     } else if (input$report_select == "Crosswalks"){
       cw <- cwInput()
       
-      cw <- subset(cw@data, c(type, street))
+      cw <- subset(cw@data, select = c(type, street))
       colnames(cw) <- c("Type", "Street")
     
       report <- cw
