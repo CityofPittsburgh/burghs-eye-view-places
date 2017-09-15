@@ -1472,6 +1472,13 @@ server <- shinyServer(function(input, output, session) {
   })
   # Generate Report Table
   output$report.table <- DT::renderDataTable({
+    if (url.exists(paste0(couchdb_url, ":5984/_utils/"))){
+      dateTime <- Sys.time()
+      names(dateTime) <- "dateTime"
+      inputs <- isolate(reactiveValuesToList(input))
+      couchDB$dataList <- c(inputs, sessionID, dateTime, sessionStart)
+      cdbAddDoc(couchDB)
+    }
     # Load Report dataset
     reportInput()
   }, escape = FALSE, options = list(scrollX = TRUE), rownames= FALSE)
