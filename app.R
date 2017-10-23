@@ -86,6 +86,9 @@ ckanGEO <- function(url) {
   readOGR(c, "OGRGeoJSON", verbose = F)
 }
 
+# Facility Usage
+facility_usage <- selectGet("facility_usage", selection_conn)
+
 # Load Recreation Types
 rec_types <- selectGet("rec_types", selection_conn)
 
@@ -410,8 +413,8 @@ server <- shinyServer(function(input, output, session) {
                     HTML('</font>'),
                     sliderInput("ft_select",
                                 label = "Step/Wall length (ft)",
-                                min = ft_min,
-                                max = ft_max,
+                                min = ft_select[1],
+                                max = ft_select[2],
                                 value = ft_select,
                                 step = 1),
                     HTML('<font color="#377eb8">'),
@@ -564,8 +567,8 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('</font>'),
                                 sliderInput("ft_select",
                                             label = "Step/Wall length (ft)",
-                                            min = ft_min,
-                                            max = ft_max,
+                                            min = ft_select[1],
+                                            max = ft_select[2],
                                             value = ft_select,
                                             step = 1),
                                 HTML('<font color="#377eb8">'),
