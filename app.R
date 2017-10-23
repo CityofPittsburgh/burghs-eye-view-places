@@ -1422,7 +1422,7 @@ server <- shinyServer(function(input, output, session) {
       pools_spray <- rbind(spray, pools, poolsfacilities)
       colnames(pools_spray) <- c("Name", "Type", "Water Source", "Capacity (gal)")
       
-      pools_spray$Name <- as.character(pools_spray$name)
+      pools_spray$Name <- as.character(pools_spray$Name)
       pools_spray <- pools_spray[order(pools_spray$Name),] 
       
       report <- pools_spray
@@ -1451,7 +1451,7 @@ server <- shinyServer(function(input, output, session) {
       waste <- wasteInput()
       
       waste <- subset(waste@data, select = c(link, managed_by_city, address, hours_of_operation, phone_number, description, notes))
-      colnames(waste) <- c("Name","City Location" ,"Location", "Hours", "Phone #", "Description", "Notes")
+      colnames(waste) <- c("Name","City Location" ,"Location", "Hours", "Phone #", "Materials", "Notes")
       
       report <- waste
     } else if (input$report_select == "City Retaining Walls") {
