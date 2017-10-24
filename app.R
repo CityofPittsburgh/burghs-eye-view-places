@@ -1399,7 +1399,7 @@ server <- shinyServer(function(input, output, session) {
       fields <- fieldsInput()
       
       fields <- subset(fields@data, select = c(name, park, field_usage, goal_post, infield_type, has_lights, left_field_distance, center_field_distance, right_field_distance))
-      colnames(fields) <- c("Name", "Park", "Field Type", "Goal Posts", "Infield", "Lights", "Left Field", "Right Field")
+      colnames(fields) <- c("Name", "Park", "Field Type", "Goal Posts", "Infield", "Lights", "Left Field", "Right Field", "Center Field")
       
       report <- fields
     } else if (input$report_select == "Pools & Spray Parks") {
