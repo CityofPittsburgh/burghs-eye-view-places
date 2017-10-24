@@ -657,6 +657,7 @@ server <- shinyServer(function(input, output, session) {
     # Prepare for Merge to Facilities
     wf@data <- transform(wf@data, feature_type = as.factor(mapvalues(feature_type, c("Spray", "Decorative"), c("Spray Fountain", "Decorative Water Fountain"))))
     wf$feature_type <- as.character(wf$feature_type)
+    wf$rentable <- "No"
     
     return(wf)
   })
@@ -677,6 +678,11 @@ server <- shinyServer(function(input, output, session) {
     # Feature Filter
     if (length(input$usage_select) > 0) {
       wf <- wf[wf@data$usage %in% input$usage_select,]
+    }
+    
+    # Rentable Filter
+    if (input$rentable_select != "") {
+      wf <- wf[wf$rentable %in% input$rentable_select,]
     }
     
     # Search Filter
