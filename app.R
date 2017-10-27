@@ -755,6 +755,28 @@ server <- shinyServer(function(input, output, session) {
     
     return(si)
   })
+  # Stop
+  stopSignsLoad <- reactive({
+    stops <- ckan("cbbb69f2-d622-4dce-9587-43965146e436")
+    stops_df <- SpatialPointsDataFrame(cbind(stops$longitude, stops$latitude), stops)
+    
+    return(stops_df)
+    })  
+  stopsInput <- reactive({
+    stops <- stopSignsLoad()
+    
+    # Operation Type Filter
+    if (length(input$intersection_select) > 0) {
+      stops <- stops[stops@data$description %in% input$intersection_select,]
+    }
+
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      stops <- stops[apply(stops@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(stops)
+  })
   # Load Crosswalks
   loadCwLoad <- reactive({
     # Load Crosswalks
@@ -1683,6 +1705,17 @@ server <- shinyServer(function(input, output, session) {
           map <- addPolylines(map, data=cw, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5,
                                   popup = ~(paste("<font color='black'><b>Type:</b>", cw$type,
                                                   "<br><b>Location:</b>", cw$street, "</font>"))
+          )
+        }
+        stops <- stopsInput()
+        if (nrow(stops) > 0) {
+          assetsCount <- assetsCount + 1
+          map <- addCircleMarkers(map, data=stops, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2,
+                                  popup = ~(paste0("<font color='black'><b>Sign Type:</b> ", stops$description, " (", stops$mutcd_code, ")",
+                                                  "<br><b>Location:</b> ", paste(stops$address_number, stops$street),
+                                                  "<br><b>Mounting Fixture:</b> ", stops$mounting_fixture,
+                                                  ifelse(is.na(stops$date_installed),"" , paste0("<br><b>Installed Date:</b> ", stops$date_installed))))
+                                                  
           )
         }
     }
