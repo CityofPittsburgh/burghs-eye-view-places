@@ -767,7 +767,7 @@ server <- shinyServer(function(input, output, session) {
     return(signs_df)
     })  
   signsInput <- reactive({
-    signs <- signsignsLoad()
+    signs <- signsLoad()
     
     # Operation Type Filter
     if (length(input$intersection_select) > 0) {
