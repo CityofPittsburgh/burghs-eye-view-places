@@ -112,8 +112,8 @@ ft_select <- as.numeric(selectGet("ft_select", selection_conn))
 materials <- as.factor(c("Alkaline Batteries", "Automotive Batteries", "Cell Phones", "CFL Lightbulbs", "Clothing", "Collectibles", "Computers and Peripherals", "Construction and Demolition Waste", "Fluorescent Tube Lightbulbs", "Freon Appliances", "General Electronics", "Household Chemicals and Waste", "Household Recyclables", "Ink and Toner", "Motor Oil", "Plastic Bags and Films", "Prescription Medication", "Propane Tanks", "Rechargeable Batteries", "Scrap Metal", "Small Business Recyclables", "Tires", "TVs and Monitors", "Yard Debris"))
 
 # CouchDB Connection
-couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
-# couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
+# couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
+couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
 # Check for Aspect or Mobile Mode (FALSE Means Mobile Mode)
 checkMode <- TRUE
@@ -1736,7 +1736,8 @@ server <- shinyServer(function(input, output, session) {
                                             "<br><b>Start Year:</b>", streets$start_year,
                                             "<br><b>Route Ahead:</b>", streets$route_ahead, 
                                             "<br><b>Route Back:</b>", streets$route_back,
-                                            "<br><b>Status:</b>", streets$status, "</font>"))
+                                            "<br><b>Status:</b>", streets$status, 
+                                            '<br><center><a href="http://pittsburghpa.gov/dpw/paving/index.html" target="_blank">View the Paving Schedule!</a></center></font>'))
         )    
       }
     }
@@ -1781,7 +1782,7 @@ server <- shinyServer(function(input, output, session) {
                                                 "<font color='black'><b>Location:</b>", steps$name,
                                                 ifelse(is.na(steps$length) | steps$length == 0, "", paste("<br><b>Length:</b>", steps$length, "ft")),
                                                 ifelse(is.na(steps$installed) | steps$installed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", steps$installed)),
-                                                '<br><center><a href="http://pittsburghpa.gov/dcp/steps" target="_blank">Volunteer to Survey City Steps!</a></center></font>'))
+                                                '</font>'))
         )
       }
     }
