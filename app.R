@@ -268,7 +268,7 @@ ui <- navbarPage(id = "navTab",
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Assets", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Crosswalks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
+                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Assets", "City Bridges", "City Signs", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Crosswalks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -1472,6 +1472,13 @@ server <- shinyServer(function(input, output, session) {
       colnames(cw) <- c("Type", "Street")
     
       report <- cw
+    } else if (input$report_select == "City Signs") {
+      signs <- signsInput()
+      
+      signs <- subset(signs@data, select = c(description, mutcd_code, address_number, street, mounting_fixture, date_installed))
+      colnames(signs) <- c("Sign Type", "MUTCD Code", "Address No.", "Street", "Mounting Fixture", "Installed")
+      
+      return(signs)
     } else if (input$report_select == "Paving Schedule") {
       streets <- streetsInput()
       
