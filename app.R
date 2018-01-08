@@ -80,11 +80,31 @@ ckanGEO <- function(url) {
   readOGR(c, "OGRGeoJSON", verbose = F)
 }
 
+# Query Using SQL
+ckanSQL <- function(url) {
+  r <- GET(url) 
+  c <- content(r, "text")
+  json <- gsub('NaN', '""', c, perl = TRUE)
+  data.frame(jsonlite::fromJSON(json)$result$records)
+}
+
+# Unique values for Resource Field
+ckanUniques <- function(id, field) {
+  url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20DISTINCT(%22", field, "%22)%20from%20%22", id, "%22")
+  unlist(c(ckanSQL(url)))
+}
+
 # Facility Usage
-facility_usage <- selectGet("facility_usage", selection_conn)
+facility_usage <- levels(as.factor(c("Cabin", "Community", "Concession", "Firehouse", "Medic Station", "Office", "Police", "Recycling", "Salt Dome", "Service", "Shelter", "Storage", "Training", "Utility", "Vacant", "Storage", "Drinking Fountain", "Decorative Water Fountain")))
 
 # Load Recreation Types
-rec_types <- selectGet("rec_types", selection_conn)
+court_types <- ckanUniques("a5b71bfa-840c-4c86-8f43-07a9ae854227", "type")
+
+field_usages <- ckanUniques("6af89346-b971-41d5-af09-49cfdb4dfe23", "field_usage")
+
+park_types <- selectGet("park_types", selection_conn)
+
+rec_types <- levels(as.factor(c(court_types, field_usages, park_types, "Activity", "Recreation", "Dugout", "Pool/Recreation", "Concession", "Greenway", "Playground")))
 
 # Environmental Select
 enviornmental_layers <- c("Flood Zone", "Landslide Prone", "Undermined Area")
@@ -93,14 +113,22 @@ enviornmental_layers <- c("Flood Zone", "Landslide Prone", "Undermined Area")
 economic_layers <- c("Historic District", "Main Streets")
 
 # Pools Select
-pool_cat <- selectGet("pool_cat", selection_conn)
+outdoor <- ckanUniques("5cc254fe-2cbd-4912-9f44-2f95f0beea9a", "type")
+
+pool_cat <- levels(as.factor(c(outdoor, "Spray Fountain", "Pool", "Pool - Closed")))
 
 # Intersections Selections
-intersection_type <- selectGet("intersection_type", selection_conn)
-flash_times <- selectGet("flash_times", selection_conn)
+signs <- ckanUniques("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c", "description")
+cw_type <- ckanUniques("f2f0c299-4f7b-4689-be3c-a2ad38252cf4", "type")
+si_type <- ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "operation_type")
+
+intersection_type <- levels(as.factor(c(signs, cw_type, si_type)))
+
+flash_times <- levels(as.factor(c(ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "flash_time"))))
 
 # Feet Select
-ft_select <- as.numeric(selectGet("ft_select", selection_conn))
+max_lngth <- max(as.numeric(ckanSQL("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20MAX(%22length%22)%20from%20%2243f40ca4-2211-4a12-8b4f-4d052662bb64%22")), as.numeric(ckanSQL("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20MIN(%22length%22)%20from%20%223e337bde-9997-46fa-b027-481b8f54eb9b%22")))
+ft_select <- c(0, max_lngth)
 
 # Waste Material Types
 materials <- as.factor(c("Alkaline Batteries", "Automotive Batteries", "Cell Phones", "CFL Lightbulbs", "Clothing", "Collectibles", "Computers and Peripherals", "Construction and Demolition Waste", "Fluorescent Tube Lightbulbs", "Freon Appliances", "General Electronics", "Household Chemicals and Waste", "Household Recyclables", "Ink and Toner", "Motor Oil", "Plastic Bags and Films", "Prescription Medication", "Propane Tanks", "Rechargeable Batteries", "Scrap Metal", "Small Business Recyclables", "Tires", "TVs and Monitors", "Yard Debris"))
@@ -675,7 +703,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Feature Filter
     if (length(input$usage_select) > 0) {
-      wf <- wf[wf@data$usage %in% input$usage_select,]
+      wf <- wf[wf$feature_type %in% input$usage_select,]
     }
     
     # Rentable Filter
@@ -888,7 +916,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      libs <- libs[apply(libs@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      libs <- libs[apply(libs, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(libs)
@@ -1138,7 +1166,7 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load Greenways
   datGreenwaysLoad <- reactive({
-    greenways <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/dcef4d943c1b44129b967d97def9e8c4_0.geojson", what = "sp")
+    greenways <- geojson_read("https://opendata.arcgis.com/datasets/d6cb53f628eb49e2991f51b07ff32bad_0.geojson", what = "sp")
     greenways@data$layer <- "Greenway"
     greenways@data$name <- toTitleCase(tolower(greenways@data$name))
     greenways@data <- subset(greenways@data, select = c(name, layer))
