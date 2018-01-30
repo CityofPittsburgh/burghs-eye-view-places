@@ -923,7 +923,7 @@ server <- shinyServer(function(input, output, session) {
   })
   datStepsLoad <- reactive({
     # Load City Steps
-    steps <- ckanGEO("https://data.wprdc.org/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson")
+    steps <- readOGR("https://data.wprdc.org/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson")
     steps@data$installed<-  as.numeric(format(as.Date(steps@data$installed), "%Y"))
     
     return(steps)
@@ -1424,8 +1424,8 @@ server <- shinyServer(function(input, output, session) {
     } else if (input$report_select == "City Steps") {
       steps <- stepsInput()
       
-      steps <- subset(steps@data, select = c(name, length, installed))
-      colnames(steps) <- c("Name", "Length (feet)", "Year Installed")
+      steps <- subset(steps@data, select = c(name, installed, material, length, number_of_steps, total_population, transit_rider_count, schools_count, overall_score, transit_score, school_score, detour_score))
+      colnames(steps) <- c("Name", "Year Installed", "Material", "Length (ft)", "# of Steps", "Total Pop.", "Transit Rider Count", "School Count", "Overall Score", "Transit Score", "School Score", "Detour Score")
       
       report <- steps
     } else if (input$report_select == "City Parks") {
@@ -1807,11 +1807,22 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(steps@data) > 0) {
         assetsCount <- assetsCount + 1
         map <- addPolylines(map, data=steps, color = "#f781bf", opacity = 0.75,
-                                popup = ~(paste(ifelse(steps$image == "", "", paste0('<center><img id="imgPicture" src="', steps$image,'" style="width:250px;"></center>')),
-                                                "<font color='black'><b>Location:</b>", steps$name,
-                                                ifelse(is.na(steps$length) | steps$length == 0, "", paste("<br><b>Length:</b>", steps$length, "ft")),
-                                                ifelse(is.na(steps$installed) | steps$installed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", steps$installed)),
-                                                '</font>'))
+                            popup = ~(paste(ifelse(steps$image == "", "", paste0('<center><img id="imgPicture" src="', steps$image,'" style="width:250px;"></center>')),
+                                            "<font color='black'><b>Location:</b>", steps$name,
+                                            ifelse(is.na(steps$length) | steps$length == 0, "", paste("<br><b>Length:</b>", steps$length, "ft")),
+                                            ifelse(is.na(steps$number_of_steps), "",  paste("<br><b># of Steps:</b>", steps$number_of_steps)),
+                                            ifelse(is.na(steps$material), "",  paste("<br><b>Material:</b>", steps$material)),
+                                            ifelse(is.na(steps$installed) | steps$installed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", steps$installed)),
+                                            ifelse(is.na(steps$total_population), "",  paste("<br><b>Population nearby:</b>", steps$total_population)),
+                                            ifelse(is.na(steps$schools_count), "",  paste("<br><b>Schools nearby:</b>", steps$schools_count)),
+                                            ifelse(is.na(steps$transit_rider_count), "", paste("<br><b>Transit Riders nearby:</b>", steps$transit_rider_count)),
+                                            ifelse(is.na(steps$overall_score), "", "<br><b>Network Scores</b> <ul>"),
+                                            ifelse(is.na(steps$overall_score), "",  paste0("<li><b>Overall Score:</b> ", steps$overall_score, "/10 </li>")),
+                                            ifelse(is.na(steps$transit_score), "",  paste0("<li><b>Transit Score:</b> ", steps$transit_score, "/10</li>")),
+                                            ifelse(is.na(steps$school_score), "",  paste0("<li><b>School Score:</b> ", ifelse(steps$school_score == 100, "No Schools", paste0(steps$school_score, "/10")), "</li>")),
+                                            ifelse(is.na(steps$detour_score), "",  paste0("<li><b>Detour Score:</b> ", steps$detour_score, "/10 </li>")),
+                                            ifelse(is.na(steps$overall_score), "", "</ul>"),
+                                            '</font>'))
         )
       }
     }
