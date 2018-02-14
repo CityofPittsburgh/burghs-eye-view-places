@@ -500,7 +500,7 @@ server <- shinyServer(function(input, output, session) {
                                 selectize = TRUE),
                     selectInput("basemap_select",
                                 label = "Basemap",
-                                choices = c(`OSM Mapnik` = "OpenStreetMap.Mapnik", `OSM France` = "OpenStreetMap.France", `OSM Humanitarian` = "OpenStreetMap.HOT", `Stamen Toner` = "Stamen.Toner", `Esri Satellite` = "Esri.WorldImagery", Esri = "Esri.WorldStreetMap", Pioneer = "Thunderforest.Pioneer"),
+                                choices = c(`OSM Mapnik` = "OpenStreetMap.Mapnik", `Code for Pittsburgh` = "mapStack", `OSM France` = "OpenStreetMap.France", `OSM Humanitarian` = "OpenStreetMap.HOT", `Stamen Toner` = "Stamen.Toner", `Esri Satellite` = "Esri.WorldImagery", Esri = "Esri.WorldStreetMap", Pioneer = "Thunderforest.Pioneer"),
                                 selected = ifelse(Sys.Date() == as.Date(paste0(this_year,"-07-15")) | Sys.Date() == as.Date(paste0(this_year,"-08-31")), "Thunderforest.Pioneer", "OpenStreetMap.Mapnik"))
           ), style = "opacity: 0.88"
         )
@@ -654,7 +654,7 @@ server <- shinyServer(function(input, output, session) {
                                             selectize = TRUE),
                                 selectInput("basemap_select",
                                             label = "Basemap",
-                                            choices = c(`OSM Mapnik` = "OpenStreetMap.Mapnik", `OSM France` = "OpenStreetMap.France", `OSM Humanitarian` = "OpenStreetMap.HOT", `Stamen Toner` = "Stamen.Toner", `Esri Satellite` = "Esri.WorldImagery", Esri = "Esri.WorldStreetMap", Pioneer = "Thunderforest.Pioneer"),
+                                            choices = c(`OSM Mapnik` = "OpenStreetMap.Mapnik", `Code for Pittsburgh` = "mapStack", `OSM France` = "OpenStreetMap.France", `OSM Humanitarian` = "OpenStreetMap.HOT", `Stamen Toner` = "Stamen.Toner", `Esri Satellite` = "Esri.WorldImagery", Esri = "Esri.WorldStreetMap", Pioneer = "Thunderforest.Pioneer"),
                                             selected = ifelse(Sys.Date() == as.Date(paste0(this_year,"-07-06")) | Sys.Date() == as.Date(paste0(this_year,"-08-31")), "Thunderforest.Pioneer", "OpenStreetMap.Mapnik")),
                                 HTML('</div>')
                       ),
@@ -1500,7 +1500,6 @@ server <- shinyServer(function(input, output, session) {
       signs <- subset(signs@data, select = c(description, mutcd_code, address_number, street, mounting_fixture, date_installed))
       colnames(signs) <- c("Sign Type", "MUTCD Code", "Address No.", "Street", "Mounting Fixture", "Installed")
       
-      return(signs)
     } else if (input$report_select == "Paving Schedule") {
       streets <- streetsInput()
       
@@ -1558,11 +1557,17 @@ server <- shinyServer(function(input, output, session) {
   output$map <- renderLeaflet({
     assetsCount <- 0
     map <- leaflet() %>% 
-      addProviderTiles(input$basemap_select,
-                       options = providerTileOptions(noWrap = TRUE)) %>%
       addEasyButton(easyButton(
         icon="fa-crosshairs", title="Locate Me",
         onClick=JS("function(btn, map){ map.locate({setView: true}); }")))
+    # Code for Pittsburgh Basemap
+    if (input$basemap_select == "mapStack") {
+      map <- addTiles(map, urlTemplate = "http://{s}.sm.mapstack.stamen.com/((terrain-background,$000[@30],$fff[hsl-saturation@80],$1b334b[hsl-color],mapbox-water[destination-in]),(watercolor,$fff[difference],$000000[hsl-color],mapbox-water[destination-out]),(terrain-background,$000[@40],$000000[hsl-color],mapbox-water[destination-out])[screen@60],(streets-and-labels,$fedd9a[hsl-color])[@50])/{z}/{x}/{y}.png", attribution = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>')
+    } else {
+      map <- addProviderTiles(map, input$basemap_select,
+                              options = providerTileOptions(noWrap = TRUE))
+    }
+    
     # Economic Regions
     if (input$toggleEconomic) {
       economic <- economicInput()
