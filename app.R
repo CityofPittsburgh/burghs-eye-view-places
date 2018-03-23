@@ -965,7 +965,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Paving
   datStreetsLoad <- reactive({
     # Load Paving Schedule
-    streets <- ckanGEO("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson")
+    streets <- readOGR("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson")
     
     return(streets)
   })
