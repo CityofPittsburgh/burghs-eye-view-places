@@ -522,7 +522,7 @@ server <- shinyServer(function(input, output, session) {
       tagList(
         # Input panel for Mobile (stationary at top)
         absolutePanel(top = 65, left = 0, width = '100%' ,
-                      wellPanel(id = "tPanel", style ="padding-left: 5px; padding-right: 5px;",
+                      wellPanel(id = "tPanel", style = ifelse(checkMode, "padding-left: 5px; padding-right: 5px;", "border: none; padding-left: 0px; padding-right: 0px;"),
                                 # Remove padding from Search Bar
                                 tags$style(type= "text/css", "#tPanel {margin-bottom:0px; padding:0px; overflow-y:scroll; max-height: calc(100vh - 60px); !important; min-height: 55px;}"),
                                 # Set background color to match panels
@@ -677,7 +677,7 @@ server <- shinyServer(function(input, output, session) {
                           left: 0px;
                           top: 55px;", leafletOutput("map")),
                       # Set map to style for Mobile
-                      tags$style(type = "text/css", "#map {height: calc(100vh - 115px) !important;}"),
+                      tags$style(type = "text/css", ifelse(checkMode, "#map {height: calc(100vh - 115px) !important;}", "#map {height: calc(100vh - 120px) !important;}")),
                       tags$head(tags$style(type="text/css", '.assetsBack {
                                            background-image: url("loading.png");
                                            background-repeat: no-repeat;
