@@ -109,9 +109,6 @@ rec_types <- levels(as.factor(c(court_types, field_usages, park_types, "Activity
 # Environmental Select
 enviornmental_layers <- c("Flood Zone", "Landslide Prone", "Undermined Area")
 
-# Economic Select
-economic_layers <- c("Historic District", "Main Streets")
-
 # Pools Select
 outdoor <- ckanUniques("5cc254fe-2cbd-4912-9f44-2f95f0beea9a", "type")
 
@@ -138,7 +135,7 @@ materials <- as.factor(c("Alkaline Batteries", "Automotive Batteries", "Cell Pho
 couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
 # Check for Aspect or Mobile Mode (FALSE Means Mobile Mode)
-checkMode <- TRUE
+checkMode <- FALSE
 
 # this_year
 this_year <- format(Sys.Date(), format="%Y")
@@ -477,15 +474,10 @@ server <- shinyServer(function(input, output, session) {
                                 multiple = TRUE,
                                 selectize = TRUE),
                     HTML('<font color="#85144b">'),
-                    checkboxInput("toggleEconomic",
-                                  label = "Economic",
+                    checkboxInput("toggleHistoric",
+                                  label = "Historic Districts",
                                   value = FALSE),
                     HTML('</font>'),
-                    selectInput("district_select",
-                                label = NULL,
-                                c(`Distric Type` ='', economic_layers),
-                                multiple = TRUE,
-                                selectize = TRUE),
                     HTML('<font color="#a65628">'),
                     checkboxInput("toggleEnvironmental",
                                   label = "Environmental",
@@ -631,15 +623,10 @@ server <- shinyServer(function(input, output, session) {
                                             multiple = TRUE,
                                             selectize = TRUE),
                                 HTML('<font color="#85144b">'),
-                                checkboxInput("toggleEconomic",
-                                              label = "Economic",
+                                checkboxInput("toggleHistoric",
+                                              label = "Historic",
                                               value = FALSE),
                                 HTML('</font>'),
-                                selectInput("district_select",
-                                            label = NULL,
-                                            c(`Distric Type` ='', economic_layers),
-                                            multiple = TRUE,
-                                            selectize = TRUE),
                                 HTML('<font color="#a65628">'),
                                 checkboxInput("toggleEnvironmental",
                                               label = "Environmental",
@@ -1273,42 +1260,25 @@ server <- shinyServer(function(input, output, session) {
     
     return(playgrounds)
   })
-  # Load Economic Data
-  datEconomicLoad <- reactive({
-    # Load Economic
-    # Load Main St
-    mainst <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/ab9b192ab4ba46d88144bacf5a0252e0_0.geojson", what = "sp", disambiguateFIDs= TRUE)
-    mainst$name <- as.character(mainst$name)
-    mainst$name <- ifelse(mainst$name == "", NA, mainst$name)
-    mainst$layer <- "Main Streets"
-    mainst@data <- subset(mainst@data, select = c(name, layer))
-    
+  # Load Historic Data
+  datHistoricLoad <- reactive({
     # Load Historic Districts
     histdist <-  geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/71df883dcf184292b69d5721df39b5dd_0.geojson", what = "sp")
     histdist$layer <- "Historic District"
     histdist$name <- histdist$NAME
     histdist@data <- subset(histdist@data, select = c(name, layer))
     
-    # Merge & Clean Economic
-    economic <- rbind(mainst, histdist, makeUniqueIDs = TRUE)  
-    economic@data$layer <- as.factor(economic@data$layer)
-    
-    return(economic)
+    return(histdist)
   })
-  economicInput <- reactive({
-    economic <- datEconomicLoad()
-    
-    # Usage Filter
-    if (length(input$environmental_select) > 0) {
-      economic <- economic[economic@data$layer %in% input$district_select,]
-    }
-    
+  historicInput <- reactive({
+    histdist <- datHistoricLoad()
+
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      economic <- economic[apply(economic@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      histdist <- histdist[apply(histdist@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
-    return(economic)
+    return(histdist)
   })
   datEnviornmentalLoad <- reactive({
     # Load Flood Zones
@@ -1581,14 +1551,13 @@ server <- shinyServer(function(input, output, session) {
                               options = providerTileOptions(noWrap = TRUE))
     }
     
-    # Economic Regions
-    if (input$toggleEconomic) {
-      economic <- economicInput()
-      if (nrow(economic@data) > 0) {
+    # Historic Regions
+    if (input$toggleHistoric) {
+      histdist <- historicInput()
+      if (nrow(histdist@data) > 0) {
         assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=economic, color = "#85144b", fillColor = "#85144b", fillOpacity = .5,
-                           popup = ~(paste("<font color='black'><b>Region:</b>", economic$layer,
-                                           ifelse(is.na(economic$name), "", paste("<br><b>Name:</b>", economic$name)),
+        map <- addPolygons(map, data=histdist, color = "#85144b", fillColor = "#85144b", fillOpacity = .5,
+                           popup = ~(paste("<font color='black'><b>Historic District:</b>", histdist$name,
                                            '</font>'))
         )
       }
