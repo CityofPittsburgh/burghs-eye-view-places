@@ -74,12 +74,6 @@ ckan <- function(id) {
   content(r)
 }
 
-ckanGEO <- function(url) {
-  r <- GET(url, add_headers(Authorization = ckan_api))
-  c <- content(r, as ="text")
-  readOGR(c, "OGRGeoJSON", verbose = F)
-}
-
 # Query Using SQL
 ckanSQL <- function(url) {
   r <- GET(url) 
@@ -116,10 +110,10 @@ pool_cat <- levels(as.factor(c(outdoor, "Spray Fountain", "Pool", "Pool - Closed
 
 # Intersections Selections
 signs <- ckanUniques("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c", "description")
-cw_type <- ckanUniques("f2f0c299-4f7b-4689-be3c-a2ad38252cf4", "type")
+mark_type <- ckanUniques("f2f0c299-4f7b-4689-be3c-a2ad38252cf4", "type")
 si_type <- ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "operation_type")
 
-intersection_type <- levels(as.factor(c(signs, cw_type, si_type)))
+intersection_type <- levels(as.factor(c(signs, mark_type, si_type)))
 
 flash_times <- levels(as.factor(c(ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "flash_time"))))
 
@@ -135,7 +129,7 @@ materials <- as.factor(c("Alkaline Batteries", "Automotive Batteries", "Cell Pho
 couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
 # Check for Aspect or Mobile Mode (FALSE Means Mobile Mode)
-checkMode <- FALSE
+checkMode <- TRUE
 
 # this_year
 this_year <- format(Sys.Date(), format="%Y")
@@ -214,7 +208,7 @@ if (Sys.Date() == eDay | Sys.Date() == pDay) {
   load.egg$icon <- "july_4"
   load.egg$tt <- "<i>Happy Independence Day! Looks like you need to try another search term.</i>"
 } else if (Sys.Date() >= as.Date(paste0(this_year,"-05-01")) & Sys.Date() <= as.Date(paste0(this_year,"-08-31"))) {
-  load.pools <- ckanGEO("https://data.wprdc.org/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson")
+  load.pools <- geojsonio::geojson_read("https://data.wprdc.org/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson", what = "sp")
   load.egg <- data.frame(coordinates(load.pools))
   colnames(load.egg) <- c("X","Y")
   load.egg$icon <- "summer"
@@ -300,7 +294,7 @@ ui <- navbarPage(id = "navTab",
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Assets", "City Bridges", "City Signs", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Crosswalks", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
+                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Assets", "City Bridges", "City Signs", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Markings", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
                                         selected= "City Assets"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -445,7 +439,7 @@ server <- shinyServer(function(input, output, session) {
                     HTML('<font color="#43a1a1">'),
                     checkboxInput("toggleWalls",
                                   label = "City Retaining Walls",
-                                  value = TRUE),
+                                  value = FALSE),
                     HTML('</font>'),
                     sliderInput("ft_select",
                                 label = "Step/Wall length (ft)",
@@ -594,7 +588,7 @@ server <- shinyServer(function(input, output, session) {
                                 HTML('<font color="#43a1a1">'),
                                 checkboxInput("toggleWalls",
                                               label = "City Retaining Walls",
-                                              value = TRUE),
+                                              value = FALSE),
                                 HTML('</font>'),
                                 sliderInput("ft_select",
                                             label = "Step/Wall length (ft)",
@@ -677,7 +671,7 @@ server <- shinyServer(function(input, output, session) {
   # Load All Water Features
   datWfLoadAll <- reactive({
     # Load Water Features
-    wf <- ckanGEO("https://data.wprdc.org/dataset/fe7cfb11-9f33-4590-a5ee-04419f3f974a/resource/f7c252a5-28be-43ab-95b5-f3eb0f1eef67/download/wfimg.geojson")
+    wf <- geojsonio::geojson_read("https://data.wprdc.org/dataset/fe7cfb11-9f33-4590-a5ee-04419f3f974a/resource/f7c252a5-28be-43ab-95b5-f3eb0f1eef67/download/wfimg.geojson", what = "sp")
     # Remove Inactive Water Features
     wf <- wf[wf$inactive == 0,]
     # Prepare for Merge to Facilities
@@ -747,7 +741,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Signalized Intersections
   datSiLoad <- reactive({
     # Load Signalized Intersections
-    si <- ckanGEO("https://data.wprdc.org/dataset/f470a3d5-f5cb-4209-93a6-c974f7d5a0a4/resource/82ce557f-2388-489f-87e0-0d9d052633c4/download/siimg.geojson")
+    si <- geojsonio::geojson_read("https://data.wprdc.org/dataset/f470a3d5-f5cb-4209-93a6-c974f7d5a0a4/resource/82ce557f-2388-489f-87e0-0d9d052633c4/download/siimg.geojson", what = "sp")
     # Clean
     si@data$description <- gsub("_", " ", si@data$description)
     si@data$description <- toTitleCase(tolower(si@data$description))
@@ -803,27 +797,27 @@ server <- shinyServer(function(input, output, session) {
     
     return(signs)
   })
-  # Load Crosswalks
+  # Load Markings
   loadCwLoad <- reactive({
-    # Load Crosswalks
-    cw <- ckanGEO("https://data.wprdc.org/dataset/31ce085b-87b9-4ffd-adbb-0a9f5b3cf3df/resource/f86f1950-3b73-46f9-8bd4-2991ea99d7c4/download/crosswalksimg.geojson")
-    return(cw)
+    # Load Markings
+    mark <- geojsonio::geojson_read("https://data.wprdc.org/dataset/31ce085b-87b9-4ffd-adbb-0a9f5b3cf3df/resource/f86f1950-3b73-46f9-8bd4-2991ea99d7c4/download/markingsimg.geojson", what = "sp")
+    return(mark)
   })
-  # Crosswalks Data with Filters
-  cwInput <- reactive({
-    cw <- loadCwLoad()
+  # Markings Data with Filters
+  markInput <- reactive({
+    mark <- loadCwLoad()
     
     # Operation Type Filter
     if (length(input$intersection_select) > 0) {
-      cw <- cw[cw@data$type %in% input$intersection_select,]
+      mark <- mark[mark@data$type %in% input$intersection_select,]
     }
 
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      cw <- cw[apply(cw@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      mark <- mark[apply(mark@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
-    return(cw)
+    return(mark)
   })
   # Load CLP
   datLibsLoad <- reactive({
@@ -923,7 +917,7 @@ server <- shinyServer(function(input, output, session) {
   })
   datStepsLoad <- reactive({
     # Load City Steps
-    steps <- readOGR("https://data.wprdc.org/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson")
+    steps <- geojsonio::geojson_read("https://data.wprdc.org/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson", what = "sp")
     steps@data$installed<-  as.numeric(format(as.Date(steps@data$installed), "%Y"))
     
     return(steps)
@@ -944,7 +938,7 @@ server <- shinyServer(function(input, output, session) {
   })
   datWallsLoad <- reactive({
     # Load Retaining Walls
-    walls <- ckanGEO("https://data.wprdc.org/dataset/5e77546c-f1e1-432a-b556-9ccf29db9b2c/resource/b126d855-d283-4875-aa29-3180099090ec/download/retainingwallsimg.geojson")
+    walls <- geojsonio::geojson_read("https://data.wprdc.org/dataset/5e77546c-f1e1-432a-b556-9ccf29db9b2c/resource/b126d855-d283-4875-aa29-3180099090ec/download/retainingwallsimg.geojson", what = "sp")
     walls$image <- as.character(walls$image)
     
     return(walls)
@@ -965,7 +959,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Paving
   datStreetsLoad <- reactive({
     # Load Paving Schedule
-    streets <- readOGR("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson")
+    streets <- geojsonio::geojson_read("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson", what = "sp")
     
     return(streets)
   })
@@ -988,7 +982,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Waste Data
   datWasteLoad <- reactive({
     # Load Waste Recovery Sites
-    waste <- ckanGEO("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
+    waste <- geojsonio::geojson_read("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson", what = "sp")
     #Build Address
     waste$address <- paste0(ifelse(is.na(waste$address_number), "", paste0(as.character(as.integer(waste$address_number)), " ")), ifelse(is.na(waste$street), "", as.character(waste$street)), paste0(ifelse(is.na(waste$city) | waste$city == "", "", paste0(" ", as.character(waste$city), ", PA"))))
     # Build URL Link
@@ -1045,7 +1039,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Bridges
   datBridgesLoad <- reactive({
     # Load Bridges
-    bridges <- ckanGEO("https://data.wprdc.org/dataset/d6e6c012-45f0-4e13-ab3b-9458fd56ad96/resource/c972b2cc-8396-4cd0-80d6-3051497da903/download/bridgesimg.geojson")
+    bridges <- geojsonio::geojson_read("https://data.wprdc.org/dataset/d6e6c012-45f0-4e13-ab3b-9458fd56ad96/resource/c972b2cc-8396-4cd0-80d6-3051497da903/download/bridgesimg.geojson", what = "sp")
     
     return(bridges)
   })
@@ -1062,7 +1056,7 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load Pools
   datPoolsLoad <- reactive({
-    pools <- ckanGEO("https://data.wprdc.org/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson")
+    pools <- geojsonio::geojson_read("https://data.wprdc.org/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson", what = "sp")
     
     return(pools)
   })
@@ -1144,7 +1138,7 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load Parks
   datLoadParks <- reactive({
-    parks <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/e95593cb0a2d4ff194be9694b40614dc_0.geojson", what = "sp")
+    parks <- geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/e95593cb0a2d4ff194be9694b40614dc_0.geojson", what = "sp")
     
     return(parks)
   })
@@ -1166,7 +1160,7 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load Greenways
   datGreenwaysLoad <- reactive({
-    greenways <- geojson_read("https://opendata.arcgis.com/datasets/d6cb53f628eb49e2991f51b07ff32bad_0.geojson", what = "sp")
+    greenways <- geojsonio::geojson_read("https://opendata.arcgis.com/datasets/d6cb53f628eb49e2991f51b07ff32bad_0.geojson", what = "sp")
     greenways@data$layer <- "Greenway"
     greenways@data$name <- toTitleCase(tolower(greenways@data$name))
     greenways@data <- subset(greenways@data, select = c(name, layer))
@@ -1192,7 +1186,7 @@ server <- shinyServer(function(input, output, session) {
   # Courts Load
   datCourtsLoad <- reactive({
     # Load Court & Rinks
-    courts <- ckanGEO("https://data.wprdc.org/dataset/8da92664-22a4-42b8-adae-1950048d70aa/resource/96d327a8-fb12-4174-a30d-7ec9a9920237/download/courtsimg.geojson")
+    courts <- geojsonio::geojson_read("https://data.wprdc.org/dataset/8da92664-22a4-42b8-adae-1950048d70aa/resource/96d327a8-fb12-4174-a30d-7ec9a9920237/download/courtsimg.geojson", what = "sp")
     courts@data$grandstand <- ifelse(courts@data$grandstand == 1, TRUE, FALSE)
     
     return(courts)
@@ -1216,7 +1210,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Fields
   datFieldsLoad <- reactive({
     # Load Playing Fields
-    fields <- ckanGEO("https://data.wprdc.org/dataset/87c77ec3-db98-4b2a-8891-d9b577b4c44d/resource/d569b513-44c0-4b65-9241-cc3d5c506760/download/fieldsimg.geojson")
+    fields <- geojsonio::geojson_read("https://data.wprdc.org/dataset/87c77ec3-db98-4b2a-8891-d9b577b4c44d/resource/d569b513-44c0-4b65-9241-cc3d5c506760/download/fieldsimg.geojson", what = "sp")
     fields@data$has_lights <- ifelse(fields@data$has_lights == 0, FALSE, TRUE)
     
     return(fields)
@@ -1239,7 +1233,7 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load Playgrounds Data
   datPlaygroundsLoad <- reactive({
-    playgrounds <- ckanGEO("https://data.wprdc.org/dataset/37e7a776-c98b-4e08-ad61-a8c8e23ec9ab/resource/12d59d62-e86d-4f37-af19-463050496ed6/download/playgroundsimg.geojson")
+    playgrounds <- geojsonio::geojson_read("https://data.wprdc.org/dataset/37e7a776-c98b-4e08-ad61-a8c8e23ec9ab/resource/12d59d62-e86d-4f37-af19-463050496ed6/download/playgroundsimg.geojson", what = "sp")
     playgrounds@data$layer <- "Playground"
     
     return(playgrounds)
@@ -1263,7 +1257,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Historic Data
   datHistoricLoad <- reactive({
     # Load Historic Districts
-    histdist <-  geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/71df883dcf184292b69d5721df39b5dd_0.geojson", what = "sp")
+    histdist <-  geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/71df883dcf184292b69d5721df39b5dd_0.geojson", what = "sp")
     histdist$layer <- "Historic District"
     histdist$name <- histdist$NAME
     histdist@data <- subset(histdist@data, select = c(name, layer))
@@ -1282,19 +1276,19 @@ server <- shinyServer(function(input, output, session) {
   })
   datEnviornmentalLoad <- reactive({
     # Load Flood Zones
-    floodzones <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/fb45ed8f9e0d463aadfab95620ffa303_0.geojson", what = "sp")
+    floodzones <- geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/fb45ed8f9e0d463aadfab95620ffa303_0.geojson", what = "sp")
     floodzones$name <- NA
     floodzones$layer <- "Flood Zone"
     floodzones@data <- subset(floodzones@data, select = c(name, layer))
     
     # Load Landslide Prone
-    landslide <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/c5b8bed5963746d4844dcfea7c2053e7_0.geojson", what = "sp")
+    landslide <- geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/c5b8bed5963746d4844dcfea7c2053e7_0.geojson", what = "sp")
     landslide$name <- NA
     landslide$layer <- "Landslide Prone"
     landslide@data <- subset(landslide@data, select = c(name, layer))
     
     # Load Undermined Areas
-    undermined <- geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/a065e686e9144110ac6ccfe7bb43fd98_0.geojson", what = "sp")
+    undermined <- geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/a065e686e9144110ac6ccfe7bb43fd98_0.geojson", what = "sp")
     undermined$layer <- "Undermined Area"
     undermined$name <- NA
     undermined@data <- subset(undermined@data, select = c(name, layer))
@@ -1323,7 +1317,7 @@ server <- shinyServer(function(input, output, session) {
   })
   datFacilitiesAllLoad <- reactive({
     # Load facilities
-    facilities <- ckanGEO("https://data.wprdc.org/dataset/e33e12d9-1268-45ed-ae47-ae3a76dcc0aa/resource/fd532423-b0ec-4028-98ff-5d414c47e01a/download/facilitiesimg.geojson")
+    facilities <- geojsonio::geojson_read("https://data.wprdc.org/dataset/e33e12d9-1268-45ed-ae47-ae3a76dcc0aa/resource/fd532423-b0ec-4028-98ff-5d414c47e01a/download/facilitiesimg.geojson", what = "sp")
     # Create Adress Column (checks to see if Address No. is valid, to add number and add space between street name)
     facilities@data$address <- paste0(ifelse(is.na(facilities@data$address_number), "", paste0(as.character(as.integer(facilities@data$address_number)), " ")), ifelse(is.na(facilities@data$street), "", as.character(facilities@data$street)))
     facilities@data$type <- as.factor(facilities@data$type)
@@ -1470,13 +1464,13 @@ server <- shinyServer(function(input, output, session) {
       colnames(si) <- c("Location", "Operation Type", "Flash Time", "Flash Yellow")
       
       report <- si
-    } else if (input$report_select == "Crosswalks"){
-      cw <- cwInput()
+    } else if (input$report_select == "Markings"){
+      mark <- markInput()
       
-      cw <- subset(cw@data, select = c(type, street))
-      colnames(cw) <- c("Type", "Street")
+      mark <- subset(mark@data, select = c(type, street))
+      colnames(mark) <- c("Type", "Street")
     
-      report <- cw
+      report <- mark
     } else if (input$report_select == "City Signs") {
       signs <- signsInput()
       
@@ -1718,13 +1712,13 @@ server <- shinyServer(function(input, output, session) {
                                                        ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
           )
         }
-        # Crosswalks
-        cw <- cwInput()
-        if (nrow(cw) > 0) {
+        # Markings
+        mark <- markInput()
+        if (nrow(mark) > 0) {
           assetsCount <- assetsCount + 1
-          map <- addPolylines(map, data=cw, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5,
-                                  popup = ~(paste("<font color='black'><b>Type:</b>", cw$type,
-                                                  "<br><b>Location:</b>", cw$street, "</font>"))
+          map <- addPolylines(map, data=mark, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5,
+                                  popup = ~(paste("<font color='black'><b>Type:</b>", mark$type,
+                                                  "<br><b>Location:</b>", mark$street, "</font>"))
           )
         }
         signs <- signsInput()
