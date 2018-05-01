@@ -377,7 +377,7 @@ server <- shinyServer(function(input, output, session) {
                              }')),
         absolutePanel(
           # Input panel for Desktops (alpha'd)
-          top = 70, left = 50, width = '325px',
+          top = 70, left = 50, width = '325px', style = "z-index:100;",
           wellPanel(id = "tPanel", style = "overflow-y:auto; max-height: calc(100vh - 90px) !important;",
                     textInput("search",
                               value = "",
@@ -654,7 +654,8 @@ server <- shinyServer(function(input, output, session) {
                       ),
                       # Generate Map
                       div(class="assetsBack", style="position: absolute;
-                          width: 100%;z-index: -1;
+                          width: 100%;
+                          z-index: 0;
                           left: 0px;
                           top: 55px;", leafletOutput("map")),
                       # Set map to style for Mobile
@@ -1138,7 +1139,7 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load Parks
   datLoadParks <- reactive({
-    parks <- geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/e95593cb0a2d4ff194be9694b40614dc_0.geojson", what = "sp")
+    parks <- geojsonio::geojson_read("https://opendata.arcgis.com/datasets/c39ca624271a4fe0afe7087a9ea805f9_0.geojson", what = "sp")
     
     return(parks)
   })
@@ -1160,7 +1161,7 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load Greenways
   datGreenwaysLoad <- reactive({
-    greenways <- geojsonio::geojson_read("https://opendata.arcgis.com/datasets/d6cb53f628eb49e2991f51b07ff32bad_0.geojson", what = "sp")
+    greenways <- geojsonio::geojson_read("https://opendata.arcgis.com/datasets/d7a239c35b964485a24126bc9e0e4306_0.geojson", what = "sp")
     greenways@data$layer <- "Greenway"
     greenways@data$name <- toTitleCase(tolower(greenways@data$name))
     greenways@data <- subset(greenways@data, select = c(name, layer))
@@ -1257,7 +1258,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Historic Data
   datHistoricLoad <- reactive({
     # Load Historic Districts
-    histdist <-  geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/71df883dcf184292b69d5721df39b5dd_0.geojson", what = "sp")
+    histdist <-  geojsonio::geojson_read("https://opendata.arcgis.com/datasets/d6373af0b9e349b38a40ea6c99224730_0.geojson", what = "sp")
     histdist$layer <- "Historic District"
     histdist$name <- histdist$NAME
     histdist@data <- subset(histdist@data, select = c(name, layer))
@@ -1276,19 +1277,19 @@ server <- shinyServer(function(input, output, session) {
   })
   datEnviornmentalLoad <- reactive({
     # Load Flood Zones
-    floodzones <- geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/fb45ed8f9e0d463aadfab95620ffa303_0.geojson", what = "sp")
+    floodzones <- geojsonio::geojson_read("https://opendata.arcgis.com/datasets/4ab4c0b4021547c79a9a6a875c1ae1be_0.geojson", what = "sp")
     floodzones$name <- NA
     floodzones$layer <- "Flood Zone"
     floodzones@data <- subset(floodzones@data, select = c(name, layer))
     
     # Load Landslide Prone
-    landslide <- geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/c5b8bed5963746d4844dcfea7c2053e7_0.geojson", what = "sp")
+    landslide <- geojsonio::geojson_read("https://opendata.arcgis.com/datasets/194cdce70d084b7e893653dece2de0bd_0.geojson", what = "sp")
     landslide$name <- NA
     landslide$layer <- "Landslide Prone"
     landslide@data <- subset(landslide@data, select = c(name, layer))
     
     # Load Undermined Areas
-    undermined <- geojsonio::geojson_read("http://pghgis-pittsburghpa.opendata.arcgis.com/datasets/a065e686e9144110ac6ccfe7bb43fd98_0.geojson", what = "sp")
+    undermined <- geojsonio::geojson_read("https://opendata.arcgis.com/datasets/428f48cd3ba540339ab3d2afc94d65a9_0.geojson", what = "sp")
     undermined$layer <- "Undermined Area"
     undermined$name <- NA
     undermined@data <- subset(undermined@data, select = c(name, layer))
