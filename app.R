@@ -27,7 +27,6 @@ library(zoo)
 library(lubridate)
 library(tools)
 library(stringi)
-library(dplyr)
 
 # Turn off Scientific Notation
 options(scipen = 999)
@@ -367,7 +366,7 @@ server <- shinyServer(function(input, output, session) {
         # Generate Map
         leafletOutput("map"),
         # Map size for Desktop CSS
-        tags$style(type = "text/css", "#map {height: calc(100vh - 60px) !important;}"),
+        tags$style(type = "text/css", "#map {height: calc(100vh - 60px) !important; z-index: 0}"),
         # Add background image
         tags$head(tags$style(type="text/css", '.Places {
                              background-image: url("loading.png");
@@ -377,7 +376,7 @@ server <- shinyServer(function(input, output, session) {
                              }')),
         absolutePanel(
           # Input panel for Desktops (alpha'd)
-          top = 70, left = 50, width = '325px', style = "z-index:100;",
+          top = 70, left = 50, width = '325px', style = "z-index: 1000",
           wellPanel(id = "tPanel", style = "overflow-y:auto; max-height: calc(100vh - 90px) !important;",
                     textInput("search",
                               value = "",
@@ -655,7 +654,7 @@ server <- shinyServer(function(input, output, session) {
                       # Generate Map
                       div(class="assetsBack", style="position: absolute;
                           width: 100%;
-                          z-index: 0;
+                          z-index: -1;
                           left: 0px;
                           top: 55px;", leafletOutput("map")),
                       # Set map to style for Mobile
