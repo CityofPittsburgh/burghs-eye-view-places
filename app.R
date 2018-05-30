@@ -1748,7 +1748,7 @@ server <- shinyServer(function(input, output, session) {
                                             "<br><b>Route Ahead:</b>", streets$route_ahead, 
                                             "<br><b>Route Back:</b>", streets$route_back,
                                             "<br><b>Status:</b>", streets$status, 
-                                            '<br><center><a href="http://pittsburghpa.gov/dpw/paving/index.html" target="_blank">View the Paving Schedule!</a></center></font>'))
+                                            '<br><center><a href="http://pittsburghpa.gov/domi/street-resurfacing/paving-schedule.html" target="_blank">View the Paving Schedule!</a></center></font>'))
         )    
       }
     }
