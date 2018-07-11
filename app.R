@@ -110,7 +110,10 @@ pool_cat <- levels(as.factor(c(outdoor, "Spray Fountain", "Pool", "Pool - Closed
 # Intersections Selections
 signs <- ckanUniques("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c", "description")
 mark_type <- ckanUniques("f2f0c299-4f7b-4689-be3c-a2ad38252cf4", "type")
+
 si_type <- ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "operation_type")
+si_type <- paste("Traffic Signal -", si_type)
+si_type <- ifelse(si_type == "Traffic Signal - NA", "Traffic Signal - Other", si_type)
 
 intersection_type <- levels(as.factor(c(signs, mark_type, si_type)))
 
