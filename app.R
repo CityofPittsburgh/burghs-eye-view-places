@@ -68,14 +68,14 @@ dollarsComma <- function(x){
 
 # Function to download WPRDC Data
 ckan <- function(id) {
-  x <- paste0("https://data.wprdc.org/datastore/dump/", id)
-  r <- GET(x, add_headers(Authorization = ckan_api), verbose())
+  url <- paste0("https://data.wprdc.org/datastore/dump/", id)
+  r <- RETRY("GET", url)
   content(r)
 }
 
 # Query Using SQL
 ckanSQL <- function(url) {
-  r <- GET(url, add_headers(Authorization = ckan_api), verbose()) 
+  r <- RETRY("GET", url) 
   c <- content(r, "text")
   json <- gsub('NaN', '""', c, perl = TRUE)
   data.frame(jsonlite::fromJSON(json)$result$records)
@@ -83,7 +83,7 @@ ckanSQL <- function(url) {
 
 # Unique values for Resource Field
 ckanUniques <- function(id, field) {
-  url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20DISTINCT(%22", field, "%22)%20from%20%22", id, "%22")
+  url <- paste0("https://data.wprdc.org/api/3/action/datastore_search_sql?sql=SELECT%20DISTINCT(%22", field, "%22)%20from%20%22", id, "%22")
   unlist(c(ckanSQL(url)))
 }
 
@@ -120,7 +120,7 @@ intersection_type <- levels(as.factor(c(signs, mark_type, si_type)))
 flash_times <- levels(as.factor(c(ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "flash_time"))))
 
 # Feet Select
-max_lngth <- max(as.numeric(ckanSQL("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20MAX(%22length%22)%20from%20%2243f40ca4-2211-4a12-8b4f-4d052662bb64%22")), as.numeric(ckanSQL("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20MIN(%22length%22)%20from%20%223e337bde-9997-46fa-b027-481b8f54eb9b%22")))
+max_lngth <- max(as.numeric(ckanSQL("https://data.wprdc.org/api/3/action/datastore_search_sql?sql=SELECT%20MAX(%22length%22)%20from%20%2243f40ca4-2211-4a12-8b4f-4d052662bb64%22")), as.numeric(ckanSQL("https://data.wprdc.org/api/3/action/datastore_search_sql?sql=SELECT%20MIN(%22length%22)%20from%20%223e337bde-9997-46fa-b027-481b8f54eb9b%22")))
 ft_select <- c(0, max_lngth)
 
 # Waste Material Types
@@ -156,7 +156,7 @@ dow <- sapply(seq(0,7),function(x) format(nov+x, "%a"))
 eDay <- nov + which(dow=="Mon")[1]
 
 if (Sys.Date() == eDay | Sys.Date() == pDay) {
-  load.egg <- ckanSQL("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20*%20FROM%20%2251efa73c-d4b8-4ac0-b65a-9c9b1f904372%22%20WHERE%22MuniName%22%20=%20%27PITTSBURGH%27")
+  load.egg <- ckanSQL("https://data.wprdc.org/api/3/action/datastore_search_sql?sql=SELECT%20*%20FROM%20%2251efa73c-d4b8-4ac0-b65a-9c9b1f904372%22%20WHERE%22MuniName%22%20=%20%27PITTSBURGH%27")
   load.egg$icon <- "election"
   load.egg$tt <- paste0("<font color='black'>No matter who you Vote for, make sure you Vote!
                         <br><b>Location: </b>", load.egg$LocName,
