@@ -127,8 +127,8 @@ ft_select <- c(0, max_lngth)
 materials <- as.factor(c("Alkaline Batteries", "Automotive Batteries", "Cell Phones", "CFL Lightbulbs", "Clothing", "Collectibles", "Computers and Peripherals", "Construction and Demolition Waste", "Fluorescent Tube Lightbulbs", "Freon Appliances", "General Electronics", "Household Chemicals and Waste", "Household Recyclables", "Ink and Toner", "Motor Oil", "Plastic Bags and Films", "Prescription Medication", "Propane Tanks", "Rechargeable Batteries", "Scrap Metal", "Small Business Recyclables", "Tires", "TVs and Monitors", "Yard Debris"))
 
 # CouchDB Connection
-couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
-# couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
+# couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
+couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
 # Check for Aspect or Mobile Mode (FALSE Means Mobile Mode)
 checkMode <- TRUE
@@ -270,14 +270,11 @@ ui <- function(request) {
                           tags$head(includeScript("google-analytics.js")),
                           # Add Tag Manager Script to Body
                           tags$body(tags$noscript(tags$iframe(src='https://www.googletagmanager.com/ns.html?id=GTM-TCTCQVD', height = 0, width = 0, style="display:none;visibility:hidden"))),
-                          # Hide error codes that may appear
-                          tags$style(type="text/css",
-                                     ".shiny-output-error { visibility: hidden; }",
-                                     ".shiny-output-error:before { visibility: hidden; }"),
-                          # Background of report.table
-                          tags$style(type="text/css", '.report.table {background-color: #fff;}'),
                           # Remove unwanted padding and margins
-                          tags$style(type="text/css", ".container-fluid {padding:0;}
+                          tags$style(type="text/css", ".report.table {background-color: #fff;}
+                                                       .shiny-output-error { visibility: hidden;}
+                                                       .shiny-output-error:before { visibility: hidden; }
+                                                       .container-fluid {padding:0;}
                                                        .navbar-header {margin:auto;}
                                                        .navbar-static-top {margin-bottom:0;}
                                                        .navbar-brand {height:60px; 
