@@ -125,8 +125,6 @@ materials <- as.factor(c("Alkaline Batteries", "Automotive Batteries", "Cell Pho
 # couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
 couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
-# Check for Aspect or Mobile Mode (FALSE Means Mobile Mode)
-
 # this_year
 this_year <- format(Sys.Date(), format="%Y")
 
