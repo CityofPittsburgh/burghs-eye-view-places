@@ -37,16 +37,6 @@ couchdb_un <- jsonlite::fromJSON("key.json")$couchdb_un
 couchdb_pw <- jsonlite::fromJSON("key.json")$couchdb_pw
 couchdb_url <- jsonlite::fromJSON("key.json")$couchdb_url
 
-selection_conn <- cdbIni(serverName = couchdb_url, port = "5984", uname = couchdb_un, pwd = couchdb_pw, DBName = "bev-inputs")
-
-# Input Selection Function
-selectGet <- function(id, conn) {
-  conn$id <- id
-  r <- cdbGetDoc(conn)$res
-  vals <- unlist(r)[3:length(r)]
-  levels(as.factor(vals))
-}
-
 # Function to read backslashes correctly
 chartr0 <- function(foo) chartr('\\','\\/',foo)
 
@@ -95,9 +85,14 @@ court_types <- ckanUniques("a5b71bfa-840c-4c86-8f43-07a9ae854227", "type")
 
 field_usages <- ckanUniques("6af89346-b971-41d5-af09-49cfdb4dfe23", "field_usage")
 
-park_types <- selectGet("park_types", selection_conn)
+# Park Types}
+parks <- RETRY("GET", "https://services1.arcgis.com/YZCmUqbcsUpOKfj7/arcgis/rest/services/ParksOpenData/FeatureServer/0/query?where=final_cat+is+not+null&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelIntersects&resultType=none&distance=0.0&units=esriSRUnit_Meter&returnGeodetic=false&outFields=final_cat&returnGeometry=false&returnCentroid=false&multipatchOption=xyFootprint&applyVCSProjection=false&returnIdsOnly=false&returnUniqueIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnDistinctValues=false&returnZ=false&returnM=false&returnExceededLimitFeatures=false&sqlFormat=standard&f=pjson")
+parks_c <- content(parks, "text")
+park_df <- jsonlite::fromJSON(parks_c)
 
-rec_types <- levels(as.factor(c(court_types, field_usages, park_types, "Activity", "Recreation", "Dugout", "Pool/Recreation", "Concession", "Greenway", "Playground")))
+park_types <- unique(park_df$features$attributes$final_cat)
+
+rec_types <- sort(c(court_types, field_usages, park_types, "Activity", "Recreation", "Dugout", "Pool/Recreation", "Concession", "Greenway", "Playground"))
 
 # Environmental Select
 enviornmental_layers <- c("Flood Zone", "Landslide Prone", "Undermined Area")
@@ -271,7 +266,9 @@ ui <- function(request) {
                           # Add Tag Manager Script to Body
                           tags$body(tags$noscript(tags$iframe(src='https://www.googletagmanager.com/ns.html?id=GTM-TCTCQVD', height = 0, width = 0, style="display:none;visibility:hidden"))),
                           # Remove unwanted padding and margins
-                          tags$style(type="text/css", ".report.table {background-color: #fff;}
+                          tags$style(type="text/css", "#report.table { background-color: white !important;}
+                                                       #DataTables_Table_0_wrapper { background-color: white !important;}
+                                                       .shiny-input-panel { margin-bottom: 0px; }
                                                        .shiny-output-error { visibility: hidden;}
                                                        .shiny-output-error:before { visibility: hidden; }
                                                        .container-fluid {padding:0;}
@@ -531,7 +528,7 @@ server <- shinyServer(function(input, output, session) {
   })
   output$buttonStyle <- renderUI({
     # Generate search & layer panel & Map (checks for mobile devices)
-    if (as.numeric(input$GetScreenWidth) > 800 & checkMode) {
+    if (as.numeric(input$GetScreenWidth) > 800) {
       div(style="margin-top: 20px", downloadButton("downloadData", paste("Export" , input$report_select), class = "dlBut"))
     } else {
       div(downloadButton("downloadData", paste("Export" , input$report_select), class = "dlBut"))
