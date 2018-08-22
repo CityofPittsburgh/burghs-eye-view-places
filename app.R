@@ -262,13 +262,10 @@ ui <- function(request) {
                           tags$head(includeScript("google-analytics.js")),
                           # Add Tag Manager Script to Body
                           tags$body(tags$noscript(tags$iframe(src='https://www.googletagmanager.com/ns.html?id=GTM-TCTCQVD', height = 0, width = 0, style="display:none;visibility:hidden"))),
-                          # Remove unwanted padding and margins
-                          tags$style(type="text/css", "#report.table { background-color: white !important;}
-                                                       #DataTables_Table_0_wrapper { background-color: white !important;}
-                                                       .shiny-input-panel { margin-bottom: 0px; }
-                                                       .shiny-output-error { visibility: hidden;}
+                          # Layout CSS
+                          tags$style(type="text/css", ".shiny-output-error { visibility: hidden;}
                                                        .shiny-output-error:before { visibility: hidden; }
-                                                       .container-fluid {padding:0;}
+                                                       .container-fluid { padding:0; }
                                                        .navbar-header {margin:auto;}
                                                        .navbar-static-top {margin-bottom:0;}
                                                        .navbar-brand {height:60px; 
@@ -279,56 +276,59 @@ ui <- function(request) {
                                                                                max-height: 400px !important;}
                                                        .form-group {margin-bottom: 0px;}
                                                        @media only screen and (min-width: 600px) {
-                                                          #map {height: calc(100vh - 60px) !important; 
-                                                                z-index: 0;}
-                                                          #tPanel {opacity: 0.88;
-                                                                   max-height: calc(100vh - 90px);}
-                                                          .btn.collapsed {display: none;}
-                                                          #mobile {display: initial;}
-                                                          #outer {position: relative; padding-bottom: 0px;}
-                                                          #search {width: 275px;}
+                                                         #map {height: calc(100vh - 60px) !important; 
+                                                               z-index: 0;}
+                                                         #tPanel {opacity: 0.88;
+                                                                  max-height: calc(100vh - 90px);}
+                                                         .btn.collapsed {display: none;}
+                                                         #mobile {display: initial;}
+                                                         #outer {position: relative; padding-bottom: 0px;}
+                                                         #search {width: 275px;}
                                                        }
                                                        @media only screen and (max-width: 600px) {
-                                                          #map {height: calc(100vh - 115px) !important;
-                                                                position: absolute !important;
-                                                                top: 115px;
-                                                                z-index: 0;}
-                                                          #aPanel {top: 60px !important; 
-                                                                   left: 0px !important; 
-                                                                   width: 100% !important;}
-                                                          .assetsBack {position: absolute;
-                                                                       width: 100%;
-                                                                       z-index: -1;
-                                                                       left: 0px;
-                                                                       top: 55px;}
-                                                          #tPanel {margin-bottom:0px; 
-                                                                   padding:0px !important; 
-                                                                   overflow-y:scroll !important; 
-                                                                   max-height: calc(100vh - 65) !important; 
-                                                                   min-height: 55px !important; 
-                                                                   padding-left: 10px !important; 
-                                                                   padding-right: 10px !important;
-                                                                   border: none;
-                                                                   width: 100%;
-                                                                   opacity: 1 !important;}
-                                                          #search {width: calc(100vw - 85px) !important; margin-left:10px !important;}
-                                                          #outer {margin-top: 5px !important; position: absolute;}
-                                                          .btn.collapsed {display: in-line !important;}
-                                                        }"),
+                                                         #map {height: calc(100vh - 115px) !important;
+                                                               position: absolute !important;
+                                                               top: 60px;
+                                                               z-index: 0;}
+                                                         .mapBack {height: calc(100vh);}
+                                                         #aPanel {top: 60px !important; 
+                                                                  left: 0px !important; 
+                                                                  width: 100% !important;}
+                                                                  .assetsBack {position: absolute;
+                                                                  width: 100%;
+                                                                  z-index: -1;
+                                                                  left: 0px;
+                                                                  top: 55px;}
+                                                         #tPanel {margin-bottom:0px; 
+                                                                  padding:0px !important; 
+                                                                  overflow-y:scroll !important; 
+                                                                  max-height: calc(100vh - 65) !important; 
+                                                                  min-height: 55px !important; 
+                                                                  padding-left: 10px !important; 
+                                                                  padding-right: 10px !important;
+                                                                  border: none;
+                                                                  width: 100%;
+                                                                  opacity: 1 !important;}
+                                                         #search {width: calc(100vw - 85px) !important; margin-left:10px !important;}
+                                                         #outer {margin-top: 5px !important; position: absolute;}
+                                                         .btn.collapsed {display: in-line !important;}
+                                                       }"),
                           # Generate Map
-                          leafletOutput("map"),
-                          # Add background image
-                          tags$head(tags$style(type="text/css", '.Places {
-                                               background-image: url("loading.png");
-                                               background-repeat: no-repeat;
-                                               background-position: center;
-                                               background-size: contain;
-                                               }')),
+                          div(class="mapBack", style='position: absolute;
+                                                      background-image: url("loading.png");
+                                                      background-repeat: no-repeat;
+                                                      background-position: center;
+                                                      background-size: contain;
+                                                      width: 100%;
+                                                      z-index: -1;
+                                                      left: 0px;
+                                                      top: 55px', 
+                              leafletOutput("map")),
         absolutePanel(
           # Input panel for Desktops (alpha'd)
           top = 70, left = 50, width = '325px', style = "z-index: 1000", id = "aPanel",
           wellPanel(id = "tPanel", style = "overflow-y:auto; min-height: 65px;",
-                    HTML('<div id="outer" style="z-index: 9; background-color:#ecf0f1; width:100%;">'),
+                    HTML('<div id="outer" style="z-index: 9; background-color:#ecf0f1;">'),
                     div(style="display:inline-block;", 
                         textInput("search", 
                                   value = "",
