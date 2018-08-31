@@ -58,7 +58,7 @@ dollarsComma <- function(x){
 
 # Function to download WPRDC Data
 ckan <- function(id) {
-  url <- paste0("https://data.wprdc.org/datastore/dump/", id)
+  url <- paste0("http://wprdc.ogopendata.com/datastore/dump/", id)
   r <- RETRY("GET", url)
   content(r)
 }
@@ -73,7 +73,7 @@ ckanSQL <- function(url) {
 
 # Unique values for Resource Field
 ckanUniques <- function(id, field) {
-  url <- paste0("https://data.wprdc.org/api/3/action/datastore_search_sql?sql=SELECT%20DISTINCT(%22", field, "%22)%20from%20%22", id, "%22")
+  url <- paste0("http://wprdc.ogopendata.com/api/3/action/datastore_search_sql?sql=SELECT%20DISTINCT(%22", field, "%22)%20from%20%22", id, "%22")
   unlist(c(ckanSQL(url)))
 }
 
@@ -115,7 +115,7 @@ intersection_type <- levels(as.factor(c(signs, mark_type, si_type)))
 flash_times <- levels(as.factor(c(ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "flash_time"))))
 
 # Feet Select
-max_lngth <- max(as.numeric(ckanSQL("https://data.wprdc.org/api/3/action/datastore_search_sql?sql=SELECT%20MAX(%22length%22)%20from%20%2243f40ca4-2211-4a12-8b4f-4d052662bb64%22")), as.numeric(ckanSQL("https://data.wprdc.org/api/3/action/datastore_search_sql?sql=SELECT%20MIN(%22length%22)%20from%20%223e337bde-9997-46fa-b027-481b8f54eb9b%22")))
+max_lngth <- max(as.numeric(ckanSQL("http://wprdc.ogopendata.com/api/3/action/datastore_search_sql?sql=SELECT%20MAX(%22length%22)%20from%20%2243f40ca4-2211-4a12-8b4f-4d052662bb64%22")), as.numeric(ckanSQL("http://wprdc.ogopendata.com/api/3/action/datastore_search_sql?sql=SELECT%20MIN(%22length%22)%20from%20%223e337bde-9997-46fa-b027-481b8f54eb9b%22")))
 ft_select <- c(0, max_lngth)
 
 # Waste Material Types
@@ -148,7 +148,7 @@ dow <- sapply(seq(0,7),function(x) format(nov+x, "%a"))
 eDay <- nov + which(dow=="Mon")[1]
 
 if (Sys.Date() == eDay | Sys.Date() == pDay) {
-  load.egg <- ckanSQL("https://data.wprdc.org/api/3/action/datastore_search_sql?sql=SELECT%20*%20FROM%20%2251efa73c-d4b8-4ac0-b65a-9c9b1f904372%22%20WHERE%22MuniName%22%20=%20%27PITTSBURGH%27")
+  load.egg <- ckanSQL("http://wprdc.ogopendata.com/api/3/action/datastore_search_sql?sql=SELECT%20*%20FROM%20%2251efa73c-d4b8-4ac0-b65a-9c9b1f904372%22%20WHERE%22MuniName%22%20=%20%27PITTSBURGH%27")
   load.egg$icon <- "election"
   load.egg$tt <- paste0("<font color='black'>No matter who you Vote for, make sure you Vote!
                         <br><b>Location: </b>", load.egg$LocName,
@@ -202,7 +202,7 @@ if (Sys.Date() == eDay | Sys.Date() == pDay) {
   load.egg$icon <- "july_4"
   load.egg$tt <- "<i>Happy Independence Day! Looks like you need to try another search term.</i>"
 } else if (Sys.Date() >= as.Date(paste0(this_year,"-05-01")) & Sys.Date() <= as.Date(paste0(this_year,"-08-31"))) {
-  load.pools <- readOGR("https://data.wprdc.org/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson")
+  load.pools <- readOGR("http://wprdc.ogopendata.com/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson")
   load.egg <- data.frame(coordinates(load.pools))
   colnames(load.egg) <- c("X","Y")
   load.egg$icon <- "summer"
@@ -535,7 +535,7 @@ server <- shinyServer(function(input, output, session) {
   # Load All Water Features
   datWfLoadAll <- reactive({
     # Load Water Features
-    wf <- readOGR("https://data.wprdc.org/dataset/fe7cfb11-9f33-4590-a5ee-04419f3f974a/resource/f7c252a5-28be-43ab-95b5-f3eb0f1eef67/download/wfimg.geojson")
+    wf <- readOGR("http://wprdc.ogopendata.com/dataset/fe7cfb11-9f33-4590-a5ee-04419f3f974a/resource/f7c252a5-28be-43ab-95b5-f3eb0f1eef67/download/wfimg.geojson")
     # Remove Inactive Water Features
     wf <- wf[wf$inactive == 0,]
     # Prepare for Merge to Facilities
@@ -605,7 +605,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Signalized Intersections
   datSiLoad <- reactive({
     # Load Signalized Intersections
-    si <- readOGR("https://data.wprdc.org/dataset/f470a3d5-f5cb-4209-93a6-c974f7d5a0a4/resource/82ce557f-2388-489f-87e0-0d9d052633c4/download/siimg.geojson")
+    si <- readOGR("http://wprdc.ogopendata.com/dataset/f470a3d5-f5cb-4209-93a6-c974f7d5a0a4/resource/82ce557f-2388-489f-87e0-0d9d052633c4/download/siimg.geojson")
     # Clean
     si@data$description <- gsub("_", " ", si@data$description)
     si@data$description <- toTitleCase(tolower(si@data$description))
@@ -664,7 +664,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Markings
   loadCwLoad <- reactive({
     # Load Markings
-    mark <- readOGR("https://data.wprdc.org/dataset/31ce085b-87b9-4ffd-adbb-0a9f5b3cf3df/resource/f86f1950-3b73-46f9-8bd4-2991ea99d7c4/download/markingsimg.geojson")
+    mark <- readOGR("http://wprdc.ogopendata.com/dataset/31ce085b-87b9-4ffd-adbb-0a9f5b3cf3df/resource/f86f1950-3b73-46f9-8bd4-2991ea99d7c4/download/markingsimg.geojson")
     return(mark)
   })
   # Markings Data with Filters
@@ -781,7 +781,7 @@ server <- shinyServer(function(input, output, session) {
   })
   datStepsLoad <- reactive({
     # Load City Steps
-    steps <- readOGR("https://data.wprdc.org/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson")
+    steps <- readOGR("http://wprdc.ogopendata.com/dataset/e9aa627c-cb22-4ba4-9961-56d9620a46af/resource/ff6dcffa-49ba-4431-954e-044ed519a4d7/download/stepsimg.geojson")
     steps@data$installed<-  as.numeric(format(as.Date(steps@data$installed), "%Y"))
     
     return(steps)
@@ -802,7 +802,7 @@ server <- shinyServer(function(input, output, session) {
   })
   datWallsLoad <- reactive({
     # Load Retaining Walls
-    walls <- readOGR("https://data.wprdc.org/dataset/5e77546c-f1e1-432a-b556-9ccf29db9b2c/resource/b126d855-d283-4875-aa29-3180099090ec/download/retainingwallsimg.geojson")
+    walls <- readOGR("http://wprdc.ogopendata.com/dataset/5e77546c-f1e1-432a-b556-9ccf29db9b2c/resource/b126d855-d283-4875-aa29-3180099090ec/download/retainingwallsimg.geojson")
     walls$image <- as.character(walls$image)
     
     return(walls)
@@ -823,7 +823,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Paving
   datStreetsLoad <- reactive({
     # Load Paving Schedule
-    streets <- readOGR("https://data.wprdc.org/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson")
+    streets <- readOGR("http://wprdc.ogopendata.com/dataset/6d872b14-c9bb-4627-a475-de6a72050cb0/resource/c390f317-ee05-4d56-8450-6d00a1b02e39/download/pavingscheduleimg.geojson")
     
     return(streets)
   })
@@ -846,7 +846,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Waste Data
   datWasteLoad <- reactive({
     # Load Waste Recovery Sites
-    waste <- readOGR("https://data.wprdc.org/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
+    waste <- readOGR("http://wprdc.ogopendata.com/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
     #Build Address
     waste$address <- paste0(ifelse(is.na(waste$address_number), "", paste0(as.character(as.integer(waste$address_number)), " ")), ifelse(is.na(waste$street), "", as.character(waste$street)), paste0(ifelse(is.na(waste$city) | waste$city == "", "", paste0(" ", as.character(waste$city), ", PA"))))
     # Build URL Link
@@ -903,7 +903,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Bridges
   datBridgesLoad <- reactive({
     # Load Bridges
-    bridges <- readOGR("https://data.wprdc.org/dataset/d6e6c012-45f0-4e13-ab3b-9458fd56ad96/resource/c972b2cc-8396-4cd0-80d6-3051497da903/download/bridgesimg.geojson")
+    bridges <- readOGR("http://wprdc.ogopendata.com/dataset/d6e6c012-45f0-4e13-ab3b-9458fd56ad96/resource/c972b2cc-8396-4cd0-80d6-3051497da903/download/bridgesimg.geojson")
     
     return(bridges)
   })
@@ -920,7 +920,7 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load Pools
   datPoolsLoad <- reactive({
-    pools <- readOGR("https://data.wprdc.org/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson")
+    pools <- readOGR("http://wprdc.ogopendata.com/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson")
     
     return(pools)
   })
@@ -1050,7 +1050,7 @@ server <- shinyServer(function(input, output, session) {
   # Courts Load
   datCourtsLoad <- reactive({
     # Load Court & Rinks
-    courts <- readOGR("https://data.wprdc.org/dataset/8da92664-22a4-42b8-adae-1950048d70aa/resource/96d327a8-fb12-4174-a30d-7ec9a9920237/download/courtsimg.geojson")
+    courts <- readOGR("http://wprdc.ogopendata.com/dataset/8da92664-22a4-42b8-adae-1950048d70aa/resource/96d327a8-fb12-4174-a30d-7ec9a9920237/download/courtsimg.geojson")
     courts@data$grandstand <- ifelse(courts@data$grandstand == 1, TRUE, FALSE)
     
     return(courts)
@@ -1074,7 +1074,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Fields
   datFieldsLoad <- reactive({
     # Load Playing Fields
-    fields <- readOGR("https://data.wprdc.org/dataset/87c77ec3-db98-4b2a-8891-d9b577b4c44d/resource/d569b513-44c0-4b65-9241-cc3d5c506760/download/fieldsimg.geojson")
+    fields <- readOGR("http://wprdc.ogopendata.com/dataset/87c77ec3-db98-4b2a-8891-d9b577b4c44d/resource/d569b513-44c0-4b65-9241-cc3d5c506760/download/fieldsimg.geojson")
     fields@data$has_lights <- ifelse(fields@data$has_lights == 0, FALSE, TRUE)
     
     return(fields)
@@ -1097,7 +1097,7 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load Playgrounds Data
   datPlaygroundsLoad <- reactive({
-    playgrounds <- readOGR("https://data.wprdc.org/dataset/37e7a776-c98b-4e08-ad61-a8c8e23ec9ab/resource/12d59d62-e86d-4f37-af19-463050496ed6/download/playgroundsimg.geojson")
+    playgrounds <- readOGR("http://wprdc.ogopendata.com/dataset/37e7a776-c98b-4e08-ad61-a8c8e23ec9ab/resource/12d59d62-e86d-4f37-af19-463050496ed6/download/playgroundsimg.geojson")
     playgrounds@data$layer <- "Playground"
     
     return(playgrounds)
@@ -1181,7 +1181,7 @@ server <- shinyServer(function(input, output, session) {
   })
   datFacilitiesAllLoad <- reactive({
     # Load facilities
-    facilities <- readOGR("https://data.wprdc.org/dataset/e33e12d9-1268-45ed-ae47-ae3a76dcc0aa/resource/fd532423-b0ec-4028-98ff-5d414c47e01a/download/facilitiesimg.geojson")
+    facilities <- readOGR("http://wprdc.ogopendata.com/dataset/e33e12d9-1268-45ed-ae47-ae3a76dcc0aa/resource/fd532423-b0ec-4028-98ff-5d414c47e01a/download/facilitiesimg.geojson")
     # Create Adress Column (checks to see if Address No. is valid, to add number and add space between street name)
     facilities@data$address <- paste0(ifelse(is.na(facilities@data$address_number), "", paste0(as.character(as.integer(facilities@data$address_number)), " ")), ifelse(is.na(facilities@data$street), "", as.character(facilities@data$street)))
     facilities@data$type <- as.factor(facilities@data$type)
