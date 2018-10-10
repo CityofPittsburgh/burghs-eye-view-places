@@ -74,16 +74,16 @@ ckanSQL <- function(url) {
 # Unique values for Resource Field
 ckanUniques <- function(id, field) {
   url <- paste0("http://wprdc.ogopendata.com/api/3/action/datastore_search_sql?sql=SELECT%20DISTINCT(%22", field, "%22)%20from%20%22", id, "%22")
-  unlist(c(ckanSQL(url)))
+  ckanSQL(url)
 }
 
 # Facility Usage
 facility_usage <- levels(as.factor(c("Cabin", "Community", "Concession", "Firehouse", "Medic Station", "Office", "Police", "Recycling", "Salt Dome", "Service", "Shelter", "Storage", "Training", "Utility", "Vacant", "Storage", "Drinking Fountain", "Decorative Water Fountain")))
 
 # Load Recreation Types
-court_types <- ckanUniques("a5b71bfa-840c-4c86-8f43-07a9ae854227", "type")
+court_types <- ckanUniques("a5b71bfa-840c-4c86-8f43-07a9ae854227", "type")$type
 
-field_usages <- ckanUniques("6af89346-b971-41d5-af09-49cfdb4dfe23", "field_usage")
+field_usages <- ckanUniques("6af89346-b971-41d5-af09-49cfdb4dfe23", "field_usage")$field_usage
 
 # Park Types}
 parks <- RETRY("GET", "https://services1.arcgis.com/YZCmUqbcsUpOKfj7/arcgis/rest/services/ParksOpenData/FeatureServer/0/query?where=final_cat+is+not+null&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelIntersects&resultType=none&distance=0.0&units=esriSRUnit_Meter&returnGeodetic=false&outFields=final_cat&returnGeometry=false&returnCentroid=false&multipatchOption=xyFootprint&applyVCSProjection=false&returnIdsOnly=false&returnUniqueIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnDistinctValues=false&returnZ=false&returnM=false&returnExceededLimitFeatures=false&sqlFormat=standard&f=pjson")
@@ -98,21 +98,21 @@ rec_types <- sort(c(court_types, field_usages, park_types, "Activity", "Recreati
 enviornmental_layers <- c("Flood Zone", "Landslide Prone", "Undermined Area")
 
 # Pools Select
-outdoor <- ckanUniques("5cc254fe-2cbd-4912-9f44-2f95f0beea9a", "type")
+outdoor <- ckanUniques("5cc254fe-2cbd-4912-9f44-2f95f0beea9a", "type")$type
 
 pool_cat <- levels(as.factor(c(outdoor, "Spray Fountain", "Pool", "Pool - Closed")))
 
 # Intersections Selections
-signs <- ckanUniques("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c", "description")
-mark_type <- ckanUniques("f2f0c299-4f7b-4689-be3c-a2ad38252cf4", "type")
+signs <- ckanUniques("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c", "description")$description
+mark_type <- ckanUniques("f2f0c299-4f7b-4689-be3c-a2ad38252cf4", "type")$type
 
-si_type <- ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "operation_type")
+si_type <- ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "operation_type")$operation_type
 si_type <- paste("Traffic Signal -", si_type)
 si_type <- ifelse(si_type == "Traffic Signal - NA", "Traffic Signal - Other", si_type)
 
 intersection_type <- levels(as.factor(c(signs, mark_type, si_type)))
 
-flash_times <- levels(as.factor(c(ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "flash_time"))))
+flash_times <- levels(as.factor(c(ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "flash_time")$flash_time)))
 
 # Feet Select
 max_lngth <- max(as.numeric(ckanSQL("http://wprdc.ogopendata.com/api/3/action/datastore_search_sql?sql=SELECT%20MAX(%22length%22)%20from%20%2243f40ca4-2211-4a12-8b4f-4d052662bb64%22")), as.numeric(ckanSQL("http://wprdc.ogopendata.com/api/3/action/datastore_search_sql?sql=SELECT%20MIN(%22length%22)%20from%20%223e337bde-9997-46fa-b027-481b8f54eb9b%22")))
