@@ -9,3 +9,6 @@ rsconnect/shinyapps.io/geoffreylarnold/Burghs_iViewPlaces.dcf
 rsconnect/shinyapps.io/geoffreylarnold/BurghsEyeViewPlacesParks.dcf
 *.dcf
 key.json
+google-analytics.js
+tag-manager-body.js
+tag-manager-head.js
