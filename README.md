@@ -26,5 +26,5 @@ Burgh's Eye View is a Shiny application built on a single app file, and therefor
   * egg: Icons used for the various season easter eggs on the application.
 * about.html: About Page tab html content
 * app.R: Main application
-* burghs-eye-view-places.Rproj: Project file for RStudio
 * parks.csv: Centroid locations of City parks for easter egg icons.
+* MISSING: tag-manager-header/body.js and google-analytics.js
