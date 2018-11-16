@@ -77,6 +77,22 @@ ckanUniques <- function(id, field) {
   ckanSQL(url)
 }
 
+# Get ID's
+getIds <- function(phrase) {
+  url <- paste0("http://data.wprdc.org/api/action/package_search?q=", gsub(" ", "%20", phrase))
+  r <- GET(url)
+  raw <- content(r, "text")
+  df <- jsonlite::fromJSON(raw)$result$results
+  tib <- tibble(df$resources) %>%
+    unnest() %>%
+    filter(format == "CSV")
+  final <- df %>%
+    select(id, name) %>%
+    right_join(tib, by = c("id" = "package_id"))
+  
+  return(final)
+}
+
 # Facility Usage
 facility_usage <- levels(as.factor(c("Cabin", "Community", "Concession", "Firehouse", "Medic Station", "Office", "Police", "Recycling", "Salt Dome", "Service", "Shelter", "Storage", "Training", "Utility", "Vacant", "Storage", "Drinking Fountain", "Decorative Water Fountain")))
 
