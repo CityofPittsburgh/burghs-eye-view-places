@@ -27,6 +27,7 @@ library(zoo)
 library(lubridate)
 library(tools)
 library(stringi)
+library(tidyr)
 
 # Turn off Scientific Notation
 options(scipen = 999)
