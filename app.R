@@ -1413,7 +1413,7 @@ server <- shinyServer(function(input, output, session) {
       load.egg$icon <- "patrick"
       load.egg$tt <- "<i>Your search didn't turn up anything, not even my Pot-o-Gold!</i>"
     } else if (Sys.Date() >= as.Date(paste0(this_year,"-04-01")) & Sys.Date() <= as.Date(paste0(this_year,"-04-30"))) {
-      load.egg <- read.csv("boundaries/Parks/parks.csv")
+      load.egg <- read.csv("parks.csv")
       load.egg$icon <- "easter_egg"
       load.egg$tt <- "<i>You couldn't find any results, but maybe you can find my eggs.</i>"
     } else if (Sys.Date() >= as.Date(paste0(this_year,"-07-01")) & Sys.Date() <= as.Date(paste0(this_year,"-07-07"))) {
