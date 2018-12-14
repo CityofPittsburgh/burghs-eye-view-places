@@ -493,6 +493,7 @@ server <- shinyServer(function(input, output, session) {
   names(sessionStart) <- "sessionStart"
   sessionID <- paste(stri_rand_strings(1, 5), gsub("\\.", "-", sessionStart) , "places", sep="-")
   names(sessionID) <- "sessionID"
+  values <- reactiveValues(assetCount = 0)
   observe({
     # Trigger this observer every time an input changes
     reactiveValuesToList(input)
@@ -1466,343 +1467,453 @@ server <- shinyServer(function(input, output, session) {
   })
   # Build City Map
   output$map <- renderLeaflet({
-    assetsCount <- 0
-    map <- leaflet() %>% 
+    leaflet() %>%
+      setView(-79.9959, 40.4406, zoom = 12) %>% 
       addEasyButton(easyButton(
         icon="fa-crosshairs", title="Locate Me",
         onClick=JS("function(btn, map){ map.locate({setView: true}); }")))
+  })
+  observe({
     # Code for Pittsburgh Basemap
     if (input$basemap_select == "mapStack") {
-      map <- addTiles(map, urlTemplate = "http://{s}.sm.mapstack.stamen.com/((terrain-background,$000[@30],$fff[hsl-saturation@80],$1b334b[hsl-color],mapbox-water[destination-in]),(watercolor,$fff[difference],$000000[hsl-color],mapbox-water[destination-out]),(terrain-background,$000[@40],$000000[hsl-color],mapbox-water[destination-out])[screen@60],(streets-and-labels,$fedd9a[hsl-color])[@50])/{z}/{x}/{y}.png", attribution = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>')
+      leafletProxy("map", session = session) %>%
+        clearTiles() %>%
+        addTiles(urlTemplate = "http://{s}.sm.mapstack.stamen.com/((terrain-background,$000[@30],$fff[hsl-saturation@80],$1b334b[hsl-color],mapbox-water[destination-in]),(watercolor,$fff[difference],$000000[hsl-color],mapbox-water[destination-out]),(terrain-background,$000[@40],$000000[hsl-color],mapbox-water[destination-out])[screen@60],(streets-and-labels,$fedd9a[hsl-color])[@50])/{z}/{x}/{y}.png", attribution = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>', options = providerTileOptions(noWrap = TRUE))
     } else {
-      map <- addProviderTiles(map, input$basemap_select,
-                              options = providerTileOptions(noWrap = TRUE))
+      leafletProxy("map", session = session) %>%
+        clearTiles() %>%
+        addProviderTiles(input$basemap_select, options = providerTileOptions(noWrap = TRUE))
     }
-    
-    # Historic Regions
-    if (input$toggleHistoric) {
-      histdist <- historicInput()
-      if (nrow(histdist@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=histdist, color = "#85144b", fillColor = "#85144b", fillOpacity = .5,
-                           popup = ~(paste("<font color='black'><b>Historic District:</b>", histdist$name,
-                                           '</font>'))
+  })
+  # City Places Layer
+  observe({
+      if (input$toggleAssets) {
+        showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Assets<center></div></font>')), type = "message", id = "cityMessage", duration = NULL, closeButton = FALSE)
+        leafletProxy("map", session = session) %>%
+          clearGroup("recreation")
+        facilities <- facilitiesInput()
+        if (nrow(facilities@data) > 0) {
+          leafletProxy("map", session = session) %>%
+            addPolygons(data = facilities, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, group = "facilities",
+                        popup = ~(paste(ifelse(facilities$image == "", "", paste0('<center><img id="imgPicture" src="', facilities$image,'" style="width:250px;"></center>')),
+                                        "<font color='black'><b>Name:</b>", facilities$name,
+                                        "<br><b>Location:</b>", facilities$address,
+                                        "<br><b>Usage:</b>", facilities$usage,
+                                        "<br><b>Dept:</b>", facilities$primary_user,
+                                        facilities$url, "</font>"))
+          )
+        }
+        wf <- wfInput()
+        if (nrow(wf) > 0) {
+          leafletProxy("map", session = session) %>%
+            addCircleMarkers(data = wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, radius = 2, group = "facilities",
+                             popup = ~(paste(ifelse(wf$image == "", "", paste0('<center><img id="imgPicture" src="', wf$image,'" style="width:250px;"></center>')),
+                                             "<font color='black'><b>Location:</b>", wf$name,
+                                             "<br><b>Feature Type:</b>", wf$feature_type,
+                                             ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
+                                             ifelse(is.na(wf$control_type), "", paste("<br><b>Control:</b>", wf$control_type)),"</font>"))
+          )
+        }
+      } else {
+        leafletProxy("map", session = session) %>%
+          clearGroup("facilities")
+      }
+    removeNotification("cityMessage")
+  })
+  # Paving Schedule
+  observe({
+    if (input$toggleStreets) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Paving Schedule<center></div></font>')), type = "message", id = "streetsMessage", duration = NULL, closeButton = FALSE)
+      streets <- streetsInput()
+      if (nrow(streets@data) > 0) {
+        leafletProxy("map", session = session) %>%
+          clearGroup("streets") %>%
+          addPolylines(data = streets, color = "#999999", opacity = 0.75, group = "streets",
+                       popup = ~(paste("<font color='black'><b>Street:</b>", streets$street,
+                                       "<br><b>Activity:</b>", streets$activity,
+                                       ifelse(streets$task_description == "", "", paste("<br><b>Description:</b>", streets$task_description)),
+                                       ifelse(is.na(streets$stop_date_actual), "", paste("<br><b>Stop Date:</b>", streets$stop_date_actual)),
+                                       "<br><b>Start Year:</b>", streets$start_year,
+                                       "<br><b>Route Ahead:</b>", streets$route_ahead,
+                                       "<br><b>Route Back:</b>", streets$route_back,
+                                       "<br><b>Status:</b>", streets$status,
+                                       '<br><center><a href="http://pittsburghpa.gov/domi/street-resurfacing/paving-schedule.html" target="_blank">View the Paving Schedule!</a></center></font>'))
         )
       }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("streets")
     }
-    # Environmental Regions
-    if (input$toggleEnvironmental) {
-      environmental <- environmentalInput()
-      if (nrow(environmental@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=environmental, color = "#a65628", fillColor = "#a65628", fillOpacity = .5,
-                           popup = ~(paste("<font color='black'><b>Region:</b>", environmental$layer,
-                                           ifelse(is.na(environmental$name), "", paste("<br><b>Name:</b>", environmental$name)),
-                                           '</font>'))
+    removeNotification("streetsMessage")
+  })
+  # City Bridges
+  observe({
+    if (input$toggleBridges) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Bridges<center></div></font>')), type = "message", id = "streetsMessage", duration = NULL, closeButton = FALSE)
+      bridges <- bridgesInput()
+      if (nrow(bridges@data) > 0) {
+        leafletProxy("map", session = session) %>%
+          clearGroup("bridges") %>%
+          addPolylines(data = bridges, color = "#D4AF37", opacity = 0.75, group = "bridges",
+                       popup = ~(paste(ifelse(bridges$image == "", "", paste0('<center><img id="imgPicture" src="', bridges$image,'" style="width:250px;"></center>')),
+                                       "<font color='black'><b>Name:</b>", bridges$name,
+                                       ifelse(is.na(bridges$year_built), "", paste("<br><b>Year Built:</b>", bridges$year_built)),
+                                       ifelse(is.na(bridges$year_rehab), "", paste("<br><b>Year last rehab:</b>", bridges$year_rehab)),
+                                       "<br><b>Start Neighborhood:</b>", bridges$start_neighborhood,
+                                       ifelse(is.na(bridges$end_neighborhood), "", paste( "<br><b>End Neighborhood:</b>", bridges$end_neighborhood)), "</font>"))
         )
       }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("bridges")
     }
-    # Recreation Layers
+    removeNotification("bridgesMessage")
+  })
+  # Recreation Layers
+  observe({
     if (input$toggleRecreation) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Recreational Layers<center></div></font>')), type = "message", id = "recMessage", duration = NULL, closeButton = FALSE)
       parks <- parksInput()
+      leafletProxy("map", session = session) %>%
+        clearGroup("recreation")
       if (nrow(parks@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=parks, color = "#4daf4a",
-                           popup = ~(paste("<font color='black'><b>Name:</b>", parks$updatepknm,
-                                           "<br><b>Type:</b>", parks$final_cat,
-                                           ifelse(parks$maintenanceresponsibility == "", "", paste0("<br><b>Maintenance: </b>", parks$maintenanceresponsibility)
-                                           )))
+        leafletProxy("map", session = session) %>%
+          addPolygons(data = parks, color = "#4daf4a", group = "recreation",
+                      popup = ~(paste("<font color='black'><b>Name:</b>", parks$updatepknm,
+                                      "<br><b>Type:</b>", parks$final_cat,
+                                      ifelse(parks$maintenanceresponsibility == "", "", paste0("<br><b>Maintenance: </b>", parks$maintenanceresponsibility))))
         )
       }
       greenways <- greenwaysInput()
       if (nrow(greenways@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=greenways, color = "#4daf4a",
-                           popup = ~(paste("<font color='black'><b>Type:</b>", greenways$layer,
-                                           ifelse(is.na(greenways$name), "", paste("<br><b>Name:</b>", greenways$name)),
-                                           '</font>'))
+        leafletProxy("map", session = session) %>%
+          addPolygons(data = greenways, color = "#4daf4a", group = "recreation",
+                      popup = ~(paste("<font color='black'><b>Type:</b>", greenways$layer,
+                                      ifelse(is.na(greenways$name), "", paste("<br><b>Name:</b>", greenways$name)),
+                                      '</font>'))
         )
       }
       # Playgrounds
       playgrounds <- playgroundsInput()
       if (nrow(playgrounds@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=playgrounds, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                           popup = ~(paste(ifelse(playgrounds$image == "", "" ,paste0('<center><img id="imgPicture" src="', playgrounds$image, '" style="width:250px;"></center>')),
-                                           "<font color='black'><b>Name:</b>", playgrounds$name,
-                                           "<br><b>Location:</b>", playgrounds$street,
-                                           "<br><b>Park:</b>", playgrounds$park, "</font>"))
+        leafletProxy("map", session = session) %>%
+          addPolygons(data = playgrounds, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5, group = "recreation",
+                      popup = ~(paste(ifelse(playgrounds$image == "", "" ,paste0('<center><img id="imgPicture" src="', playgrounds$image, '" style="width:250px;"></center>')),
+                                      "<font color='black'><b>Name:</b>", playgrounds$name,
+                                      "<br><b>Location:</b>", playgrounds$street,
+                                      "<br><b>Park:</b>", playgrounds$park, "</font>"))
         )
       }
       #Rec Facilities
       recfacilities <- recfacilitiesInput()
       if (nrow(recfacilities@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=recfacilities, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                           popup = ~(paste(ifelse(recfacilities$image == "", "", paste0('<center><img id="imgPicture" src="', recfacilities$image,'" style="width:250px;"></center>')),
-                                           "<font color='black'><b>Name:</b>", recfacilities$name,
-                                           "<br><b>Location:</b>", recfacilities$address,
-                                           "<br><b>Usage:</b>", recfacilities$usage,
-                                           "<br><b>Dept:</b>", recfacilities$primary_user,
-                                           recfacilities$url, "</font>"))
+        leafletProxy("map", session = session) %>%
+          addPolygons(data = recfacilities, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5, group = "recreation",
+                      popup = ~(paste(ifelse(recfacilities$image == "", "", paste0('<center><img id="imgPicture" src="', recfacilities$image,'" style="width:250px;"></center>')),
+                                      "<font color='black'><b>Name:</b>", recfacilities$name,
+                                      "<br><b>Location:</b>", recfacilities$address,
+                                      "<br><b>Usage:</b>", recfacilities$usage,
+                                      "<br><b>Dept:</b>", recfacilities$primary_user,
+                                      recfacilities$url, "</font>"))
           )
       }
       # Court & Rinks
       courts <- courtsInput()
       if(nrow(courts@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=courts, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                           popup = ~(paste("<font color='black'><b>Name:</b>", courts$name,
-                                           "<br><b>Location:</b>", courts$park,
-                                           "<br><b>Type:</b>", courts$type,
-                                           "<br><b>Surface Material:</b>", courts$surface_material, 
-                                           "<br><b>Grandstands:</b>", courts$grandstand, "</font>"))
+        leafletProxy("map", session = session) %>%
+          addPolygons(data = courts, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5, group = "recreation",
+                      popup = ~(paste("<font color='black'><b>Name:</b>", courts$name,
+                                      "<br><b>Location:</b>", courts$park,
+                                      "<br><b>Type:</b>", courts$type,
+                                      "<br><b>Surface Material:</b>", courts$surface_material,
+                                      "<br><b>Grandstands:</b>", courts$grandstand, "</font>"))
         )
       }
       # Playing Fields
       fields <- fieldsInput()
       if (nrow(fields@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=fields, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5,
-                           popup = ~(paste("<font color='black'><b>Name:</b>", fields$name,
-                                           "<br><b>Location:</b>", fields$park,
-                                           "<br><b>Type:</b>", fields$field_usage,
-                                           ifelse(fields$infield_type == "N/A", "", paste("<br><b>Infield Type:</b>", fields$infield_type)),
-                                           "<br><b>Lights:</b>", fields$has_lights,
-                                           ifelse(fields$goal_post == 0, "", paste("<br><b>Goal Posts:</b>", fields$goal_post)),
-                                           ifelse(fields$left_field_distance == "N/A", "", paste("<br><b>Left Field:</b>", fields$left_field_distance, "ft")),
-                                           ifelse(fields$center_field_distance == "N/A", "", paste("<br><b>Center Field:</b>", fields$center_field_distance, "ft")),
-                                           ifelse(fields$right_field_distance == "N/A", "", paste("<br><b>Right Field:</b>", fields$right_field_distance, "ft")), "</font>"))
+        leafletProxy("map", session = session) %>%
+          addPolygons(data = fields, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5, group = "recreation",
+                      popup = ~(paste("<font color='black'><b>Name:</b>", fields$name,
+                                      "<br><b>Location:</b>", fields$park,
+                                      "<br><b>Type:</b>", fields$field_usage,
+                                      ifelse(fields$infield_type == "N/A", "", paste("<br><b>Infield Type:</b>", fields$infield_type)),
+                                      "<br><b>Lights:</b>", fields$has_lights,
+                                      ifelse(fields$goal_post == 0, "", paste("<br><b>Goal Posts:</b>", fields$goal_post)),
+                                      ifelse(fields$left_field_distance == "N/A", "", paste("<br><b>Left Field:</b>", fields$left_field_distance, "ft")),
+                                      ifelse(fields$center_field_distance == "N/A", "", paste("<br><b>Center Field:</b>", fields$center_field_distance, "ft")),
+                                      ifelse(fields$right_field_distance == "N/A", "", paste("<br><b>Right Field:</b>", fields$right_field_distance, "ft")), "</font>"))
           )
         }
-      }
-      # Pool Layers
-      if (input$togglePools) {
-        pools <- poolsInput()
-        if (nrow(pools@data) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addPolygons(map, data=pools, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
-                             popup = ~(paste(ifelse(pools$image == "", "", paste0('<center><img id="imgPicture" src="', pools$image, '" style="width:250px;"></center>')),
-                                             "<font color='black'><b>Name:</b>", pools$name,
-                                             "<br><b>Usage:</b>", pools$type,
-                                             "<br><b>Water Source:</b>", pools$water_source,
-                                             ifelse(is.na(pools$capacity), "", paste("<br><b>Capacity:</b>", prettyNum(pools$capacity, big.mark = ","),"gal")), "</font>"))
-          )
-        }
-        spray <- sprayInput()
-        if (nrow(spray) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addCircleMarkers(map, data=spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, radius = 4,
-                                  popup = ~(paste(ifelse(spray$image == "", "", paste0('<center><img id="imgPicture" src="', spray$image,'" style="width:250px;"></center>')),
-                                                  "<font color='black'><b>Location:</b>", spray$name,
-                                                  "<br><b>Usage:</b>", spray$feature_type,
-                                                  ifelse(is.na(spray$make) | spray$make == "", "", paste("<br><b>Make:</b>", spray$make)),
-                                                  ifelse(is.na(spray$control_type) | spray$control_type == "", "", paste("<br><b>Control:</b>", spray$control_type)),"</font>"))
-          )
-        }
-        poolsfacilities <- poolsfacilitiesInput()
-        if (nrow(poolsfacilities@data) > 0 ) {
-          assetsCount <- assetsCount + 1
-          map <- addPolygons(map, data=poolsfacilities, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5,
-                             popup = ~(paste(ifelse(poolsfacilities$image == "", "", paste0('<center><img id="imgPicture" src="', poolsfacilities$image, '" style="width:250px;"></center>')),
-                                             "<font color='black'><b>Name:</b>", poolsfacilities$name,
-                                             "<br><b>Location:</b>", poolsfacilities$address,
-                                             "<br><b>Usage:</b>", poolsfacilities$usage,
-                                             "<br><b>Dept:</b>", poolsfacilities$primary_user,
-                                             poolsfacilities$url, "</font>"))
-          )
-        }
-      }
-      # Carnegie Library of Pittsburgh Locations
-      if (input$toggleLibs) {
-        libs <- libsInput()
-        if (nrow(libs) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addCircleMarkers(map, data=libs, color = "#b10dc9", fillColor = "#b10dc9", fillOpacity = .5, radius = 8,  ~Lon, ~Lat,
-                                  popup = ~(paste("<font color='black'><b>Name:</b> ", '<a href="', libs$url_name,'" target="_blank">', libs$Name, '</a>', 
-                                                  "<br><b>Address:</b> ", libs$full_address,
-                                                  "<br><b>Phone:</b> ", libs$Phone,
-                                                  "<br><b>Hours:</b><br><ul>",
-                                                  ifelse(is.na(libs$MoOpen_tt), "<li><b>Mon:</b> Closed", paste0("<li><b>Mon:</b> ", libs$MoOpen_tt, " - ", libs$MoClose_tt)),
-                                                  ifelse(is.na(libs$TuOpen_tt), "<li><b>Tue:</b> Closed", paste0("<li><b>Tue:</b> ", libs$TuOpen_tt, " - ", libs$TuClose_tt)),
-                                                  ifelse(is.na(libs$WeOpen_tt), "<li><b>Wed:</b> Closed", paste0("<li><b>Wed:</b> ", libs$WeOpen_tt, " - ", libs$WeClose_tt)),
-                                                  ifelse(is.na(libs$ThOpen_tt), "<li><b>Thu:</b> Closed", paste0("<li><b>Thu:</b> ", libs$ThOpen_tt, " - ", libs$ThClose_tt)),
-                                                  ifelse(is.na(libs$FrOpen_tt), "<li><b>Fri:</b> Closed", paste0("<li><b>Fri:</b> ", libs$FrOpen_tt, " - ", libs$FrClose_tt)),
-                                                  ifelse(is.na(libs$SaOpen_tt), "<li><b>Sat:</b> Closed", paste0("<li><b>Sat:</b> ", libs$SaOpen_tt,  " - ", libs$SaClose_tt)),
-                                                  ifelse(is.na(libs$SuClose_tt), "<li><b>Sun:</b> Closed", paste0("<li><b>Sun:</b> ",  libs$SuOpen_tt, " - ", libs$SuClose_tt)), "</ul>"
-                                  ))
-          )
-        }
-      }
-      # Traffic Signals
-      if (input$toggleIntersections) {
-        si <- siInput()
-        if (nrow(si) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addCircleMarkers(map, data=si, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2,
-                                       popup = ~(paste("<font color='black'><b>Location:</b>", si$description,
-                                                       ifelse(is.na(si$operation_type), "", paste("<br><b>Operation Type:</b>", si$operation_type)),
-                                                       ifelse(is.na(si$flash_time), "", paste("<br><b>Flash Time:</b>", si$flash_time)),
-                                                       ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
-          )
-        }
-        # Markings
-        mark <- markInput()
-        if (nrow(mark) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addPolylines(map, data=mark, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5,
-                                  popup = ~(paste("<font color='black'><b>Type:</b>", mark$type,
-                                                  "<br><b>Location:</b>", mark$street, "</font>"))
-          )
-        }
-        signs <- signsInput()
-        if (nrow(signs) > 0) {
-          assetsCount <- assetsCount + 1
-          map <- addCircleMarkers(map, data=signs, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2,
-                                  popup = ~(paste0("<font color='black'><b>Sign Type:</b> ", signs$description, " (", signs$mutcd_code, ")",
-                                                  "<br><b>Location:</b> ", paste(signs$address_number, signs$street),
-                                                  "<br><b>Mounting Fixture:</b> ", signs$mounting_fixture,
-                                                  ifelse(is.na(signs$date_installed),"" , paste0("<br><b>Installed Date:</b> ", signs$date_installed))))
-                                                  
-          )
-        }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("recreation")
     }
-    # Paving Schedule
-    if (input$toggleStreets) {
-      streets <- streetsInput()
-      if (nrow(streets@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolylines(map, data=streets, color = "#999999", opacity = 0.75,
-                            popup = ~(paste("<font color='black'><b>Street:</b>", streets$street,
-                                            "<br><b>Activity:</b>", streets$activity,
-                                            ifelse(streets$task_description == "", "", paste("<br><b>Description:</b>", streets$task_description)),
-                                            ifelse(is.na(streets$stop_date_actual), "", paste("<br><b>Stop Date:</b>", streets$stop_date_actual)),
-                                            "<br><b>Start Year:</b>", streets$start_year,
-                                            "<br><b>Route Ahead:</b>", streets$route_ahead, 
-                                            "<br><b>Route Back:</b>", streets$route_back,
-                                            "<br><b>Status:</b>", streets$status, 
-                                            '<br><center><a href="http://pittsburghpa.gov/domi/street-resurfacing/paving-schedule.html" target="_blank">View the Paving Schedule!</a></center></font>'))
-        )    
+    removeNotification("recMessage")
+  })
+  # Carnegie Library of Pittsburgh Locations
+  observe({
+    if (input$toggleLibs) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Carnegie Libraries<center></div></font>')), type = "message", id = "libsMessage", duration = NULL, closeButton = FALSE)
+      
+      libs <- libsInput()
+      if (nrow(libs) > 0) {
+        leafletProxy("map", session = session) %>%
+          clearGroup("libs") %>%
+          addCircleMarkers(data = libs, color = "#b10dc9", fillColor = "#b10dc9", fillOpacity = .5, radius = 8,  ~Lon, ~Lat, group = "libs",
+                           popup = ~(paste("<font color='black'><b>Name:</b> ", '<a href="', libs$url_name,'" target="_blank">', libs$Name, '</a>',
+                                           "<br><b>Address:</b> ", libs$full_address,
+                                           "<br><b>Phone:</b> ", libs$Phone,
+                                           "<br><b>Hours:</b><br><ul>",
+                                           ifelse(is.na(libs$MoOpen_tt), "<li><b>Mon:</b> Closed", paste0("<li><b>Mon:</b> ", libs$MoOpen_tt, " - ", libs$MoClose_tt)),
+                                           ifelse(is.na(libs$TuOpen_tt), "<li><b>Tue:</b> Closed", paste0("<li><b>Tue:</b> ", libs$TuOpen_tt, " - ", libs$TuClose_tt)),
+                                           ifelse(is.na(libs$WeOpen_tt), "<li><b>Wed:</b> Closed", paste0("<li><b>Wed:</b> ", libs$WeOpen_tt, " - ", libs$WeClose_tt)),
+                                           ifelse(is.na(libs$ThOpen_tt), "<li><b>Thu:</b> Closed", paste0("<li><b>Thu:</b> ", libs$ThOpen_tt, " - ", libs$ThClose_tt)),
+                                           ifelse(is.na(libs$FrOpen_tt), "<li><b>Fri:</b> Closed", paste0("<li><b>Fri:</b> ", libs$FrOpen_tt, " - ", libs$FrClose_tt)),
+                                           ifelse(is.na(libs$SaOpen_tt), "<li><b>Sat:</b> Closed", paste0("<li><b>Sat:</b> ", libs$SaOpen_tt,  " - ", libs$SaClose_tt)),
+                                           ifelse(is.na(libs$SuClose_tt), "<li><b>Sun:</b> Closed", paste0("<li><b>Sun:</b> ",  libs$SuOpen_tt, " - ", libs$SuClose_tt)), "</ul>"))
+          )
       }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("libs")
     }
-    # Waste Recovery Sites
-    if (input$toggleWaste) {
-      waste <- wasteInput()
-      if (nrow(waste) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addCircleMarkers(map, data=waste, color = "#099fff", fillColor = "#099fff", fillOpacity = .5, radius = 8,
-                                popup = ~(paste("<font color='black'><b>Name:</b>", waste$link,
-                                                "<br><b>City Location:</b>", waste$managed_by_city,
-                                                "<br><b>Location:</b>", waste$address,
-                                                "<br><b>Phone:</b>", waste$phone_number,
-                                                "<br><b>Hours:</b>", waste$hours_of_operation,
-                                                ifelse(waste$description == "", "", paste("<br><b>Materials:</b>", waste$description)),
-                                                ifelse(waste$notes == "", "", paste("<br><b>Notes:</b>", waste$notes, "</font>"))))
-        )
-      }
-    }
-    # City Bridges
-    if (input$toggleBridges) {
-      bridges <- bridgesInput()
-      if (nrow(bridges@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolylines(map, data=bridges, color = "#D4AF37", opacity = 0.75,
-                            popup = ~(paste(ifelse(bridges$image == "", "", paste0('<center><img id="imgPicture" src="', bridges$image,'" style="width:250px;"></center>')),
-                                            "<font color='black'><b>Name:</b>", bridges$name, 
-                                            ifelse(is.na(bridges$year_built), "", paste("<br><b>Year Built:</b>", bridges$year_built)),
-                                            ifelse(is.na(bridges$year_rehab), "", paste("<br><b>Year last rehab:</b>", bridges$year_rehab)),
-                                            "<br><b>Start Neighborhood:</b>", bridges$start_neighborhood,
-                                            ifelse(is.na(bridges$end_neighborhood), "", paste( "<br><b>End Neighborhood:</b>", bridges$end_neighborhood)), "</font>"))
-        )    
-      }
-    }
-    # City Steps
+    removeNotification("libsMessage")
+  })
+  # City Steps
+  observe({
     if (input$toggleSteps) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Steps<center></div></font>')), type = "message", id = "stepsMessage", duration = NULL, closeButton = FALSE)
+      
       steps <- stepsInput()
       if (nrow(steps@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolylines(map, data=steps, color = "#f781bf", opacity = 0.75,
-                            popup = ~(paste(ifelse(steps$image == "", "", paste0('<center><img id="imgPicture" src="', steps$image,'" style="width:250px;"></center>')),
-                                            "<font color='black'><b>Location:</b>", steps$name,
-                                            ifelse(is.na(steps$length) | steps$length == 0, "", paste("<br><b>Length:</b>", steps$length, "ft")),
-                                            ifelse(is.na(steps$number_of_steps), "",  paste("<br><b># of Steps:</b>", steps$number_of_steps)),
-                                            ifelse(is.na(steps$material), "",  paste("<br><b>Material:</b>", steps$material)),
-                                            ifelse(is.na(steps$installed) | steps$installed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", steps$installed)),
-                                            ifelse(is.na(steps$total_population), "",  paste("<br><b>Population nearby:</b>", steps$total_population)),
-                                            ifelse(is.na(steps$schools_count), "",  paste("<br><b>Schools nearby:</b>", steps$schools_count)),
-                                            ifelse(is.na(steps$transit_rider_count), "", paste("<br><b>Transit Riders nearby:</b>", steps$transit_rider_count)),
-                                            ifelse(is.na(steps$overall_score), "", "<br><b>Network Scores</b> <ul>"),
-                                            ifelse(is.na(steps$overall_score), "",  paste0("<li><b>Overall Score:</b> ", steps$overall_score, "/10 </li>")),
-                                            ifelse(is.na(steps$transit_score), "",  paste0("<li><b>Transit Score:</b> ", steps$transit_score, "/10</li>")),
-                                            ifelse(is.na(steps$school_score), "",  paste0("<li><b>School Score:</b> ", ifelse(steps$school_score == 100, "No Schools", paste0(steps$school_score, "/10")), "</li>")),
-                                            ifelse(is.na(steps$detour_score), "",  paste0("<li><b>Detour Score:</b> ", steps$detour_score, "/10 </li>")),
-                                            ifelse(is.na(steps$overall_score), "", "</ul>"),
-                                            '</font>'))
+        leafletProxy("map", session = session) %>%
+          clearGroup("steps") %>%
+          addPolylines(data = steps, color = "#f781bf", opacity = 0.75, group = "steps",
+                       popup = ~(paste(ifelse(steps$image == "", "", paste0('<center><img id="imgPicture" src="', steps$image,'" style="width:250px;"></center>')),
+                                       "<font color='black'><b>Location:</b>", steps$name,
+                                       ifelse(is.na(steps$length) | steps$length == 0, "", paste("<br><b>Length:</b>", steps$length, "ft")),
+                                       ifelse(is.na(steps$number_of_steps), "",  paste("<br><b># of Steps:</b>", steps$number_of_steps)),
+                                       ifelse(is.na(steps$material), "",  paste("<br><b>Material:</b>", steps$material)),
+                                       ifelse(is.na(steps$installed) | steps$installed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", steps$installed)),
+                                       ifelse(is.na(steps$total_population), "",  paste("<br><b>Population nearby:</b>", steps$total_population)),
+                                       ifelse(is.na(steps$schools_count), "",  paste("<br><b>Schools nearby:</b>", steps$schools_count)),
+                                       ifelse(is.na(steps$transit_rider_count), "", paste("<br><b>Transit Riders nearby:</b>", steps$transit_rider_count)),
+                                       ifelse(is.na(steps$overall_score), "", "<br><b>Network Scores</b> <ul>"),
+                                       ifelse(is.na(steps$overall_score), "",  paste0("<li><b>Overall Score:</b> ", steps$overall_score, "/10 </li>")),
+                                       ifelse(is.na(steps$transit_score), "",  paste0("<li><b>Transit Score:</b> ", steps$transit_score, "/10</li>")),
+                                       ifelse(is.na(steps$school_score), "",  paste0("<li><b>School Score:</b> ", ifelse(steps$school_score == 100, "No Schools", paste0(steps$school_score, "/10")), "</li>")),
+                                       ifelse(is.na(steps$detour_score), "",  paste0("<li><b>Detour Score:</b> ", steps$detour_score, "/10 </li>")),
+                                       ifelse(is.na(steps$overall_score), "", "</ul>"),
+                                       '</font>'))
         )
       }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("steps")
     }
+    removeNotification("stepsMessage")
+  })
+  observe({
     # Retaining Walls
     if (input$toggleWalls) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Retaining Walls<center></div></font>')), type = "message", id = "wallsMessage", duration = NULL, closeButton = FALSE)
       walls <- wallsInput()
       if (nrow(walls@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolylines(map, data=walls, color = "#43a1a1", opacity = 0.75,
-                            popup = ~(paste(ifelse(walls$image == "", "", paste0('<center><img id="imgPicture" src="', walls$image,'" style="width:250px;"></center>')),
-                                            "<font color='black'><b>Location:</b>", walls$name,
-                                            ifelse(is.na(walls$length) | walls$length == 0, "", paste("<br><b>Length:</b>", walls$length, "ft")),
-                                            ifelse(is.na(walls$height) | walls$height == 0, "", paste("<br><b>Height:</b>", walls$height, "ft")),
-                                            ifelse(is.na(walls$year_constructed) | walls$year_constructed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", walls$year_constructed)), '</font>'))
+        leafletProxy("map", session = session) %>%
+          clearGroup("walls") %>%
+          addPolylines(data = walls, color = "#43a1a1", opacity = 0.75,
+                       popup = ~(paste(ifelse(walls$image == "", "", paste0('<center><img id="imgPicture" src="', walls$image,'" style="width:250px;"></center>')),
+                                       "<font color='black'><b>Location:</b>", walls$name,
+                                       ifelse(is.na(walls$length) | walls$length == 0, "", paste("<br><b>Length:</b>", walls$length, "ft")),
+                                       ifelse(is.na(walls$height) | walls$height == 0, "", paste("<br><b>Height:</b>", walls$height, "ft")),
+                                       ifelse(is.na(walls$year_constructed) | walls$year_constructed == 0, "<br><b>Year Constructed:</b> Unknown", paste("<br><b>Year Constructed:</b>", walls$year_constructed)), '</font>'))
         )
       }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("walls")
     }
-    # City Places Layer
-    if (input$toggleAssets) {
-      facilities <- facilitiesInput()
-      if (nrow(facilities@data) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addPolygons(map, data=facilities, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5,
-                           popup = ~(paste(ifelse(facilities$image == "", "", paste0('<center><img id="imgPicture" src="', facilities$image,'" style="width:250px;"></center>')),
-                                           "<font color='black'><b>Name:</b>", facilities$name,
-                                           "<br><b>Location:</b>", facilities$address,
-                                           "<br><b>Usage:</b>", facilities$usage,
-                                           "<br><b>Dept:</b>", facilities$primary_user,
-                                           facilities$url, "</font>"))
-        )
-      }
-      wf <- wfInput()
-      if (nrow(wf) > 0) {
-        assetsCount <- assetsCount + 1
-        map <- addCircleMarkers(map, data=wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, radius = 2,
-                                popup = ~(paste(ifelse(wf$image == "", "", paste0('<center><img id="imgPicture" src="', wf$image,'" style="width:250px;"></center>')),
-                                                "<font color='black'><b>Location:</b>", wf$name,
-                                                "<br><b>Feature Type:</b>", wf$feature_type,
-                                                ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
-                                                ifelse(is.na(wf$control_type), "", paste("<br><b>Control:</b>", wf$control_type)),"</font>"))
-        )
-      }
-    }
-    if (assetsCount == 0) {
-      if (input$search == "Vote!") {
-        egg <- easterEgg()
-      } else {
-        egg <- easterEgg()
-        egg <- egg[sample(1:nrow(egg),1),]
-      }
-      
-      map <- addMarkers(map, data=egg, ~X, ~Y, icon = ~icons_egg[icon], popup = ~tt) %>% 
-        setView(-79.9959, 40.4406, zoom = 12)
-    }
-    #Write inputs to Couch
-    if (url.exists(paste0(couchdb_url, ":5984/_utils/"))){
-      dateTime <- Sys.time()
-      names(dateTime) <- "dateTime"
-      inputs <- isolate(reactiveValuesToList(input))
-      couchDB$dataList <- c(inputs, sessionID, dateTime, sessionStart)
-      cdbAddDoc(couchDB)
-    }
-    #Generate Map
-    map
+    removeNotification("wallsMessage")
   })
+  # Pool Layers
+  observe({
+    if (input$togglePools) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Pools & Spray Parks<center></div></font>')), type = "message", id = "poolsMessage", duration = NULL, closeButton = FALSE)
+      leafletProxy("map", session = session) %>%
+        clearGroup("pools")
+      
+      pools <- poolsInput()
+      if (nrow(pools@data) > 0) {
+        leafletProxy("map", session = session) %>%
+          addPolygons(data = pools, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, group = "pools",
+                      popup = ~(paste(ifelse(pools$image == "", "", paste0('<center><img id="imgPicture" src="', pools$image, '" style="width:250px;"></center>')),
+                                      "<font color='black'><b>Name:</b>", pools$name,
+                                      "<br><b>Usage:</b>", pools$type,
+                                      "<br><b>Water Source:</b>", pools$water_source,
+                                      ifelse(is.na(pools$capacity), "", paste("<br><b>Capacity:</b>", prettyNum(pools$capacity, big.mark = ","),"gal")), "</font>"))
+                      )
+      }
+      spray <- sprayInput()
+      if (nrow(spray) > 0) {
+        leafletProxy("map", session = session) %>%
+          addCircleMarkers(data = spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, radius = 4, group = "pools",
+                           popup = ~(paste(ifelse(spray$image == "", "", paste0('<center><img id="imgPicture" src="', spray$image,'" style="width:250px;"></center>')),
+                                           "<font color='black'><b>Location:</b>", spray$name,
+                                           "<br><b>Usage:</b>", spray$feature_type,
+                                           ifelse(is.na(spray$make) | spray$make == "", "", paste("<br><b>Make:</b>", spray$make)),
+                                           ifelse(is.na(spray$control_type) | spray$control_type == "", "", paste("<br><b>Control:</b>", spray$control_type)),"</font>"))
+        )
+      }
+      poolsfacilities <- poolsfacilitiesInput()
+      if (nrow(poolsfacilities@data) > 0 ) {
+        leafletProxy("map", session = session) %>%
+          addPolygons(data = poolsfacilities, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, group = "pools",
+                      popup = ~(paste(ifelse(poolsfacilities$image == "", "", paste0('<center><img id="imgPicture" src="', poolsfacilities$image, '" style="width:250px;"></center>')),
+                                      "<font color='black'><b>Name:</b>", poolsfacilities$name,
+                                      "<br><b>Location:</b>", poolsfacilities$address,
+                                      "<br><b>Usage:</b>", poolsfacilities$usage,
+                                      "<br><b>Dept:</b>", poolsfacilities$primary_user,
+                                      poolsfacilities$url, "</font>"))
+        )
+      }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("pools")
+    }
+    removeNotification("poolsMessage")
+  })
+  # Waste Recovery Sites
+  observe({
+    if (input$toggleWaste) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Waste Recovery Sites<center></div></font>')), type = "message", id = "poolsMessage", duration = NULL, closeButton = FALSE)
+      
+      waste <- wasteInput()
+      if (nrow(waste) > 0) {
+        leafletProxy("map", session = session) %>%
+          clearGroup("waste") %>%
+          addCircleMarkers(data = waste, color = "#099fff", fillColor = "#099fff", fillOpacity = .5, radius = 8, group = "waste",
+                           popup = ~(paste("<font color='black'><b>Name:</b>", waste$link,
+                                           "<br><b>City Location:</b>", waste$managed_by_city,
+                                           "<br><b>Location:</b>", waste$address,
+                                           "<br><b>Phone:</b>", waste$phone_number,
+                                           "<br><b>Hours:</b>", waste$hours_of_operation,
+                                           ifelse(waste$description == "", "", paste("<br><b>Materials:</b>", waste$description)),
+                                           ifelse(waste$notes == "", "", paste("<br><b>Notes:</b>", waste$notes, "</font>"))))
+        )
+      }
+    }else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("waste")
+    }
+    removeNotification("poolsMessage")
+  })
+  # Historic Regions
+  observe({
+    if (input$toggleHistoric) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Historical Districts<center></div></font>')), type = "message", id = "histdistMessage", duration = NULL, closeButton = FALSE)
+      histdist <- historicInput()
+      if (nrow(histdist@data) > 0) {
+        leafletProxy("map", session = session) %>%
+          clearGroup("hist") %>%
+          addPolygons(data = histdist, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "hist",
+                      popup = ~(paste("<font color='black'><b>Historic District:</b>", histdist$name,
+                                      '</font>'))
+          )
+      }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("hist")
+    }
+    removeNotification("histdistMessage")
+  })
+  # Environmental Regions
+  observe({
+    if (input$toggleEnvironmental) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Environmnetal Regions<center></div></font>')), type = "message", id = "environMessage", duration = NULL, closeButton = FALSE)
+      
+      environmental <- environmentalInput()
+      if (nrow(environmental@data) > 0) {
+        leafletProxy("map", session = session) %>%
+          clearGroup("environ") %>%
+          addPolygons(data = environmental, color = "#a65628", fillColor = "#a65628", fillOpacity = .5, group = "environ",
+                      popup = ~(paste("<font color='black'><b>Region:</b>", environmental$layer,
+                                      ifelse(is.na(environmental$name), "", paste("<br><b>Name:</b>", environmental$name)),
+                                      '</font>'))
+          ) %>%
+          flyToBounds(environmental@bbox[1,1], environmental@bbox[2,1], environmental@bbox[1,2], environmental@bbox[2,2])
+      }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("environ")
+    }
+    removeNotification("environMessage")
+  })
+  # Traffic Signals
+  observe({
+    if (input$toggleIntersections) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Intersection Data<center></div></font>')), type = "message", id = "interMessage", duration = NULL, closeButton = FALSE)
+      
+      leafletProxy("map", session = session) %>%
+        clearGroup("intersections")
+      si <- siInput()
+      if (nrow(si) > 0) {
+        leafletProxy("map", session = session) %>%
+          addCircleMarkers(data = si, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2, group = "intersections",
+                           popup = ~(paste("<font color='black'><b>Location:</b>", si$description,
+                                           ifelse(is.na(si$operation_type), "", paste("<br><b>Operation Type:</b>", si$operation_type)),
+                                           ifelse(is.na(si$flash_time), "", paste("<br><b>Flash Time:</b>", si$flash_time)),
+                                           ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
+        )
+      }
+      # Markings
+      mark <- markInput()
+      if (nrow(mark) > 0) {
+        leafletProxy("map", session = session) %>%
+          addPolylines(data = mark, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, group = "intersections",
+                       popup = ~(paste("<font color='black'><b>Type:</b>", mark$type,
+                                       "<br><b>Location:</b>", mark$street, "</font>"))
+        )
+      }
+      signs <- signsInput()
+      if (nrow(signs) > 0) {
+        leafletProxy("map", session = session) %>%
+          addCircleMarkers(data = signs, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2, group = "intersections",
+                           popup = ~(paste0("<font color='black'><b>Sign Type:</b> ", signs$description, " (", signs$mutcd_code, ")",
+                                            "<br><b>Location:</b> ", paste(signs$address_number, signs$street),
+                                            "<br><b>Mounting Fixture:</b> ", signs$mounting_fixture,
+                                            ifelse(is.na(signs$date_installed),"" , paste0("<br><b>Installed Date:</b> ", signs$date_installed))))
+
+        )
+      }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("intersections")
+    }
+    removeNotification("interMessage")
+  })
+  #   if (assetsCount == 0) {
+  #     if (input$search == "Vote!") {
+  #       egg <- easterEgg()
+  #     } else {
+  #       egg <- easterEgg()
+  #       egg <- egg[sample(1:nrow(egg),1),]
+  #     }
+  #     
+  #     map <- addMarkers(map, data=egg, ~X, ~Y, icon = ~icons_egg[icon], popup = ~tt) %>% 
+  #       setView(-79.9959, 40.4406, zoom = 12)
+  #   }
+  #   #Write inputs to Couch
+  #   if (url.exists(paste0(couchdb_url, ":5984/_utils/"))){
+  #     dateTime <- Sys.time()
+  #     names(dateTime) <- "dateTime"
+  #     inputs <- isolate(reactiveValuesToList(input))
+  #     couchDB$dataList <- c(inputs, sessionID, dateTime, sessionStart)
+  #     cdbAddDoc(couchDB)
+  #   }
+  #   #Generate Map
+  #   map
+  # })
 })
 
 enableBookmarking("url")
