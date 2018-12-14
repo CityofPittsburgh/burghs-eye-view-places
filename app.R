@@ -1099,10 +1099,11 @@ server <- shinyServer(function(input, output, session) {
   # Load Historic Data
   datHistoricLoad <- reactive({
     # Load Historic Districts
-    histdist <-  readOGR("https://opendata.arcgis.com/datasets/d6373af0b9e349b38a40ea6c99224730_0.geojson")
-    histdist$layer <- "Historic District"
-    histdist$name <- histdist$NAME
-    histdist@data <- subset(histdist@data, select = c(name, layer))
+    histdist <- readOGR("https://opendata.arcgis.com/datasets/d6373af0b9e349b38a40ea6c99224730_0.geojson")
+    histdist@data <- histdist@data %>%
+      rename(name = historic_name) %>%
+      mutate(layer = "Historic District") %>%
+      select(name, layer)
     
     return(histdist)
   })
