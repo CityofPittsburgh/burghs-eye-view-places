@@ -215,6 +215,32 @@ ui <- function(request) {
                           # Add Tag Manager Script to Body
                           tags$body(tags$noscript(tags$iframe(src='https://www.googletagmanager.com/ns.html?id=GTM-TCTCQVD', height = 0, width = 0, style="display:none;visibility:hidden"))),
                           # Layout CSS
+                          # Notification Centered and Color Fix
+                          tags$head(tags$style(type = "text/css", 
+                                               '.shiny-notification {
+                                                    position: fixed;
+                                                    background: #2c3e50;
+                                                    top: calc(50%);;
+                                                    left: calc(50%);;
+                                                    width: calc(25%);;
+                                                    min-width: 200px;
+                                                    transform: translate(-50%, 0);}
+                                               .shiny-notification-close { color: white; }
+                                               .loading:after {
+                                                                overflow: hidden;
+                                                                 display: inline-block;
+                                                                 vertical-align: bottom;
+                                                                 -webkit-animation: ellipsis steps(4,end) 900ms infinite;      
+                                                                 animation: ellipsis steps(4,end) 900ms infinite;
+                                                                 content: "...";
+                                                                 width: 0px;
+                                                              }
+                                              @keyframes ellipsis {
+                                                  to { width: 1.25em; }
+                                                }
+                                               @-webkit-keyframes ellipsis {
+                                                  to { width: 1.25em; }
+                                              }')),
                           tags$style(type="text/css", ".shiny-output-error { visibility: hidden;}
                                                        .shiny-output-error:before { visibility: hidden; }
                                                        .container-fluid { padding:0; }
