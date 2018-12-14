@@ -254,7 +254,7 @@ ui <- function(request) {
                                                                                max-height: 400px !important;}
                                                        .form-group {margin-bottom: 0px;}
                                                        @media only screen and (min-width: 600px) {
-                                                         #map {height: calc(100vh - 60px) !important; 
+                                                         #map {height: calc(100vh - 55px) !important; 
                                                                z-index: 0;}
                                                          #tPanel {opacity: 0.88;
                                                                   max-height: calc(100vh - 90px);}
