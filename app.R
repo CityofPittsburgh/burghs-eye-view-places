@@ -954,7 +954,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Rec Centers
     recfacilities <- facilities[facilities@data$usage %in%  c("Activity", "Recreation", "Dugout", "Pool/Recreation", "Concession"),]
-    recfacilities@data$usage <- as.factor(recfacilities@data$usage)
+    recfacilities$usage <- as.factor(recfacilities$usage)
     
     return(recfacilities)
   })
@@ -1052,8 +1052,8 @@ server <- shinyServer(function(input, output, session) {
   # Load Fields
   datFieldsLoad <- reactive({
     # Load Playing Fields
-    fields <- readOGR("http://wprdc.ogopendata.com/dataset/87c77ec3-db98-4b2a-8891-d9b577b4c44d/resource/d569b513-44c0-4b65-9241-cc3d5c506760/download/fieldsimg.geojson")
-    fields@data$has_lights <- ifelse(fields@data$has_lights == 0, FALSE, TRUE)
+    fields <- readOGR("https://data.wprdc.org/dataset/87c77ec3-db98-4b2a-8891-d9b577b4c44d/resource/d569b513-44c0-4b65-9241-cc3d5c506760/download/fields_img.geojson")
+    fields$has_lights <- ifelse(fields$has_lights == 0, FALSE, TRUE)
     
     return(fields)
   })
@@ -1063,7 +1063,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Usage Filter
     if (length(input$recreation_select) > 0) {
-      fields <- fields[fields@data$field_usage %in% input$recreation_select,]
+      fields <- fields[fields$field_usage %in% input$recreation_select,]
     }
     
     # Search Filter
@@ -1637,7 +1637,7 @@ server <- shinyServer(function(input, output, session) {
       }
       # Playing Fields
       fields <- fieldsInput()
-      if (nrow(fields@data) > 0) {
+      if (nrow(fields) > 0) {
         leafletProxy("map", session = session) %>%
           addPolygons(data = fields, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5, group = "recreation",
                       popup = ~(paste("<font color='black'><b>Name:</b>", fields$name,
@@ -1935,6 +1935,7 @@ server <- shinyServer(function(input, output, session) {
     # Recreation
     if (input$toggleRecreation) {
       # Parks
+      parks <- parksInput()
       if (nrow(parks@data) > 0) {
         layersCount <- layersCount + 1
       }
