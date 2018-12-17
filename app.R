@@ -1029,7 +1029,7 @@ server <- shinyServer(function(input, output, session) {
   datCourtsLoad <- reactive({
     # Load Court & Rinks
     courts <- readOGR("http://wprdc.ogopendata.com/dataset/8da92664-22a4-42b8-adae-1950048d70aa/resource/96d327a8-fb12-4174-a30d-7ec9a9920237/download/courtsimg.geojson")
-    courts@data$grandstand <- ifelse(courts@data$grandstand == 1, TRUE, FALSE)
+    courts$grandstand <- ifelse(courts$grandstand == 1, TRUE, FALSE)
     
     return(courts)
   })
@@ -1524,8 +1524,8 @@ server <- shinyServer(function(input, output, session) {
     if (input$toggleStreets) {
       leafletProxy("map", session = session) %>%
         clearGroup("streets")
-      
       showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Paving Schedule<center></div></font>')), type = "message", id = "streetsMessage", duration = NULL, closeButton = FALSE)
+      
       streets <- streetsInput()
       if (nrow(streets@data) > 0) {
         leafletProxy("map", session = session) %>%
@@ -1611,6 +1611,7 @@ server <- shinyServer(function(input, output, session) {
       #Rec Facilities
       recfacilities <- recfacilitiesInput()
       if (nrow(recfacilities@data) > 0) {
+        print("recfac")
         leafletProxy("map", session = session) %>%
           addPolygons(data = recfacilities, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5, group = "recreation",
                       popup = ~(paste(ifelse(recfacilities$image == "", "", paste0('<center><img id="imgPicture" src="', recfacilities$image,'" style="width:250px;"></center>')),
@@ -1624,6 +1625,7 @@ server <- shinyServer(function(input, output, session) {
       # Court & Rinks
       courts <- courtsInput()
       if(nrow(courts@data) > 0) {
+        print("courts")
         leafletProxy("map", session = session) %>%
           addPolygons(data = courts, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5, group = "recreation",
                       popup = ~(paste("<font color='black'><b>Name:</b>", courts$name,
