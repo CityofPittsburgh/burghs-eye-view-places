@@ -1874,8 +1874,10 @@ server <- shinyServer(function(input, output, session) {
       
       leafletProxy("map", session = session) %>%
         clearGroup("intersections")
+      
       si <- siInput()
       if (nrow(si) > 0) {
+        values$layers <- unique(append(values$layers, "si"))
         leafletProxy("map", session = session) %>%
           addCircleMarkers(data = si, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2, group = "intersections",
                            popup = ~(paste("<font color='black'><b>Location:</b>", si$description,
@@ -1883,18 +1885,24 @@ server <- shinyServer(function(input, output, session) {
                                            ifelse(is.na(si$flash_time), "", paste("<br><b>Flash Time:</b>", si$flash_time)),
                                            ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
         )
+      } else {
+        values$layers <- values$layers[which(values$layers != "si")]
       }
       # Markings
       mark <- markInput()
       if (nrow(mark) > 0) {
+        values$layers <- unique(append(values$layers, "mark"))
         leafletProxy("map", session = session) %>%
           addPolylines(data = mark, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, group = "intersections",
                        popup = ~(paste("<font color='black'><b>Type:</b>", mark$type,
                                        "<br><b>Location:</b>", mark$street, "</font>"))
         )
+      } else {
+        values$layers <- values$layers[which(values$layers != "mark")]
       }
       signs <- signsInput()
       if (nrow(signs) > 0) {
+        values$layers <- unique(append(values$layers, "signs"))
         leafletProxy("map", session = session) %>%
           addCircleMarkers(data = signs, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2, group = "intersections",
                            popup = ~(paste0("<font color='black'><b>Sign Type:</b> ", signs$description, " (", signs$mutcd_code, ")",
@@ -1903,10 +1911,15 @@ server <- shinyServer(function(input, output, session) {
                                             ifelse(is.na(signs$date_installed),"" , paste0("<br><b>Installed Date:</b> ", signs$date_installed))))
 
         )
+      } else {
+        values$layers <- values$layers[which(values$layers != "signs")]
       }
     } else {
       leafletProxy("map", session = session) %>%
         clearGroup("intersections")
+      values$layers <- values$layers[which(values$layers != "si")]
+      values$layers <- values$layers[which(values$layers != "mark")]
+      values$layers <- values$layers[which(values$layers != "signs")]
     }
     removeNotification("interMessage")
   })
