@@ -1492,7 +1492,6 @@ server <- shinyServer(function(input, output, session) {
           clearGroup("facilities")
         facilities <- facilitiesInput()
         if (nrow(facilities@data) > 0) {
-          values$layers <- unique(append(values$layers, "facilities"))
           leafletProxy("map", session = session) %>%
             addPolygons(data = facilities, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, group = "facilities",
                         popup = ~(paste(ifelse(facilities$image == "", "", paste0('<center><img id="imgPicture" src="', facilities$image,'" style="width:250px;"></center>')),
@@ -1502,12 +1501,9 @@ server <- shinyServer(function(input, output, session) {
                                         "<br><b>Dept:</b>", facilities$primary_user,
                                         facilities$url, "</font>"))
           )
-        } else {
-          values$layers <- values$layers[which(values$layers != "facilities")]
         }
         wf <- wfInput()
         if (nrow(wf) > 0) {
-          values$layers <- unique(append(values$layers, "wf"))
           leafletProxy("map", session = session) %>%
             addCircleMarkers(data = wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, radius = 2, group = "facilities",
                              popup = ~(paste(ifelse(wf$image == "", "", paste0('<center><img id="imgPicture" src="', wf$image,'" style="width:250px;"></center>')),
@@ -1516,26 +1512,23 @@ server <- shinyServer(function(input, output, session) {
                                              ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
                                              ifelse(is.na(wf$control_type), "", paste("<br><b>Control:</b>", wf$control_type)),"</font>"))
           )
-        } else {
-          values$layers <- values$layers[which(values$layers != "wf")]
         }
       } else {
         leafletProxy("map", session = session) %>%
           clearGroup("facilities")
-        values$layers <- values$layers[which(values$layers != "facilities")]
-        values$layers <- values$layers[which(values$layers != "wf")]
       }
     removeNotification("cityMessage")
   })
   # Paving Schedule
   observe({
     if (input$toggleStreets) {
+      leafletProxy("map", session = session) %>%
+        clearGroup("streets")
+      
       showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Paving Schedule<center></div></font>')), type = "message", id = "streetsMessage", duration = NULL, closeButton = FALSE)
       streets <- streetsInput()
       if (nrow(streets@data) > 0) {
-        values$layers <- unique(append(values$layers, "streets"))
         leafletProxy("map", session = session) %>%
-          clearGroup("streets") %>%
           addPolylines(data = streets, color = "#999999", opacity = 0.75, group = "streets",
                        popup = ~(paste("<font color='black'><b>Street:</b>", streets$street,
                                        "<br><b>Activity:</b>", streets$activity,
@@ -1547,26 +1540,23 @@ server <- shinyServer(function(input, output, session) {
                                        "<br><b>Status:</b>", streets$status,
                                        '<br><center><a href="http://pittsburghpa.gov/domi/street-resurfacing/paving-schedule.html" target="_blank">View the Paving Schedule!</a></center></font>'))
         )
-      } else {
-        leafletProxy("map", session = session) %>%
-          clearGroup("streets")
       }
     } else {
       leafletProxy("map", session = session) %>%
         clearGroup("streets")
-      values$layers <- values$layers[which(values$layers != "streets")]
     }
     removeNotification("streetsMessage")
   })
   # City Bridges
   observe({
     if (input$toggleBridges) {
+      leafletProxy("map", session = session) %>%
+        clearGroup("bridges")
       showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Bridges<center></div></font>')), type = "message", id = "bridgesMessage", duration = NULL, closeButton = FALSE)
+      
       bridges <- bridgesInput()
       if (nrow(bridges@data) > 0) {
-        values$layers <- unique(append(values$layers, "bridges"))
         leafletProxy("map", session = session) %>%
-          clearGroup("bridges") %>%
           addPolylines(data = bridges, color = "#D4AF37", opacity = 0.75, group = "bridges",
                        popup = ~(paste(ifelse(bridges$image == "", "", paste0('<center><img id="imgPicture" src="', bridges$image,'" style="width:250px;"></center>')),
                                        "<font color='black'><b>Name:</b>", bridges$name,
@@ -1579,19 +1569,18 @@ server <- shinyServer(function(input, output, session) {
     } else {
       leafletProxy("map", session = session) %>%
         clearGroup("bridges")
-      values$layers <- values$layers[which(values$layers != "bridges")]
     }
     removeNotification("bridgesMessage")
   })
   # Recreation Layers
   observe({
     if (input$toggleRecreation) {
-      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Recreational Layers<center></div></font>')), type = "message", id = "recMessage", duration = NULL, closeButton = FALSE)
-      parks <- parksInput()
       leafletProxy("map", session = session) %>%
         clearGroup("recreation")
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Recreational Layers<center></div></font>')), type = "message", id = "recMessage", duration = NULL, closeButton = FALSE)
+      
+      parks <- parksInput()
       if (nrow(parks@data) > 0) {
-        values$layers <- unique(append(values$layers, "parks"))
         leafletProxy("map", session = session) %>%
           addPolygons(data = parks, color = "#4daf4a", group = "recreation",
                       popup = ~(paste("<font color='black'><b>Name:</b>", parks$updatepknm,
@@ -1669,12 +1658,13 @@ server <- shinyServer(function(input, output, session) {
   # Carnegie Library of Pittsburgh Locations
   observe({
     if (input$toggleLibs) {
+      leafletProxy("map", session = session) %>%
+        clearGroup("libs")
       showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Carnegie Libraries<center></div></font>')), type = "message", id = "libsMessage", duration = NULL, closeButton = FALSE)
       
       libs <- libsInput()
       if (nrow(libs) > 0) {
         leafletProxy("map", session = session) %>%
-          clearGroup("libs") %>%
           addCircleMarkers(data = libs, color = "#b10dc9", fillColor = "#b10dc9", fillOpacity = .5, radius = 8,  ~Lon, ~Lat, group = "libs",
                            popup = ~(paste("<font color='black'><b>Name:</b> ", '<a href="', libs$url_name,'" target="_blank">', libs$Name, '</a>',
                                            "<br><b>Address:</b> ", libs$full_address,
@@ -1698,12 +1688,13 @@ server <- shinyServer(function(input, output, session) {
   # City Steps
   observe({
     if (input$toggleSteps) {
+      leafletProxy("map", session = session) %>%
+        clearGroup("steps")
       showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Steps<center></div></font>')), type = "message", id = "stepsMessage", duration = NULL, closeButton = FALSE)
       
       steps <- stepsInput()
       if (nrow(steps@data) > 0) {
         leafletProxy("map", session = session) %>%
-          clearGroup("steps") %>%
           addPolylines(data = steps, color = "#f781bf", opacity = 0.75, group = "steps",
                        popup = ~(paste(ifelse(steps$image == "", "", paste0('<center><img id="imgPicture" src="', steps$image,'" style="width:250px;"></center>')),
                                        "<font color='black'><b>Location:</b>", steps$name,
@@ -1732,11 +1723,13 @@ server <- shinyServer(function(input, output, session) {
   observe({
     # Retaining Walls
     if (input$toggleWalls) {
+      leafletProxy("map", session = session) %>%
+        clearGroup("walls")
       showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Retaining Walls<center></div></font>')), type = "message", id = "wallsMessage", duration = NULL, closeButton = FALSE)
+      
       walls <- wallsInput()
       if (nrow(walls@data) > 0) {
         leafletProxy("map", session = session) %>%
-          clearGroup("walls") %>%
           addPolylines(data = walls, color = "#43a1a1", opacity = 0.75,
                        popup = ~(paste(ifelse(walls$image == "", "", paste0('<center><img id="imgPicture" src="', walls$image,'" style="width:250px;"></center>')),
                                        "<font color='black'><b>Location:</b>", walls$name,
@@ -1803,7 +1796,7 @@ server <- shinyServer(function(input, output, session) {
     if (input$toggleWaste) {
       leafletProxy("map", session = session) %>%
         clearGroup("waste")
-      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Waste Recovery Sites<center></div></font>')), type = "message", id = "poolsMessage", duration = NULL, closeButton = FALSE)
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Waste Recovery Sites<center></div></font>')), type = "message", id = "wasteMessage", duration = NULL, closeButton = FALSE)
       
       waste <- wasteInput()
       if (nrow(waste) > 0) {
@@ -1822,7 +1815,7 @@ server <- shinyServer(function(input, output, session) {
       leafletProxy("map", session = session) %>%
         clearGroup("waste")
     }
-    removeNotification("poolsMessage")
+    removeNotification("wasteMessage")
   })
   # Historic Regions
   observe({
@@ -1834,7 +1827,6 @@ server <- shinyServer(function(input, output, session) {
       histdist <- historicInput()
       if (nrow(histdist@data) > 0) {
         leafletProxy("map", session = session) %>%
-          clearGroup("hist") %>%
           addPolygons(data = histdist, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "hist",
                       popup = ~(paste("<font color='black'><b>Historic District:</b>", histdist$name,
                                       '</font>'))
@@ -1870,11 +1862,10 @@ server <- shinyServer(function(input, output, session) {
   # Traffic Signals
   observe({
     if (input$toggleIntersections) {
-      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Intersection Data<center></div></font>')), type = "message", id = "interMessage", duration = NULL, closeButton = FALSE)
-      
       leafletProxy("map", session = session) %>%
         clearGroup("intersections")
-      
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Intersection Data<center></div></font>')), type = "message", id = "interMessage", duration = NULL, closeButton = FALSE)
+
       si <- siInput()
       if (nrow(si) > 0) {
         leafletProxy("map", session = session) %>%
@@ -1911,8 +1902,144 @@ server <- shinyServer(function(input, output, session) {
     }
     removeNotification("interMessage")
   })
+  # Easter Egg check to see what layers are active and if they have any data
   observe({
-    if (length(values$layers) == 0) {
+    layersCount <- 0
+    # City Assets
+    if (input$toggleAssets) {
+      facilities <- facilitiesInput()
+      if (nrow(facilities@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+      wf <- wfInput()
+      if (nrow(wf) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Paving Schedule
+    if (input$toggleStreets) {
+      streets <- streetsInput()
+      if (nrow(streets@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Bridges
+    if (input$toggleBridges) {
+      bridges <- bridgesInput()
+      if (nrow(bridges@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Recreation
+    if (input$toggleRecreation) {
+      # Parks
+      if (nrow(parks@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+      # Greenways
+      greenways <- greenwaysInput()
+      if (nrow(greenways@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+      # Playgrounds
+      playgrounds <- playgroundsInput()
+      if (nrow(playgrounds@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+      #Rec Facilities
+      recfacilities <- recfacilitiesInput()
+      if (nrow(recfacilities@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+      # Court & Rinks
+      courts <- courtsInput()
+      if(nrow(courts@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+      # Playing Fields
+      fields <- fieldsInput()
+      if (nrow(fields@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # CLP
+    if (input$toggleLibs) {
+      libs <- libsInput()
+      if (nrow(libs) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Steps
+    if (input$toggleSteps) {
+      steps <- stepsInput()
+      if (nrow(steps@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Walls
+    if (input$toggleWalls) {
+      walls <- wallsInput()
+      if (nrow(walls@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Pools
+    if (input$togglePools) {
+      pools <- poolsInput()
+      if (nrow(pools@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+      spray <- sprayInput()
+      if (nrow(spray) > 0) {
+        layersCount <- layersCount + 1
+      }
+      poolsfacilities <- poolsfacilitiesInput()
+      if (nrow(poolsfacilities@data) > 0 ) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Waste Disposal Sites
+    if (input$toggleWaste) {
+      waste <- wasteInput()
+      if (nrow(waste) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Historic Districts
+    if (input$toggleHistoric) {
+      histdist <- historicInput()
+      if (nrow(histdist@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Enviornmental Layers
+    if (input$toggleEnvironmental) {
+      environmental <- environmentalInput()
+      if (nrow(environmental@data) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+    # Intersection Data
+    if (input$toggleIntersections) {
+      # Signals
+      si <- siInput()
+      if (nrow(si) > 0) {
+        layersCount <- layersCount + 1
+      }
+      # Markings
+      mark <- markInput()
+      if (nrow(mark) > 0) {
+        layersCount <- layersCount + 1
+      }
+      # Signs
+      signs <- signsInput()
+      if (nrow(signs) > 0) {
+        layersCount <- layersCount + 1
+      }
+    }
+  
+    # If no active layers, build egg dataframe
+    if (layersCount == 0) {
       if (input$search == "Vote!") {
         egg <- easterEgg()
       } else {
@@ -1925,6 +2052,7 @@ server <- shinyServer(function(input, output, session) {
         addMarkers(data = egg, ~X, ~Y, icon = ~icons_egg[icon], popup = ~tt, group = "egg") %>%
         setView(-79.9959, 40.4406, zoom = 12)
     } else {
+      # Clear old easter egg
       leafletProxy("map", session =session) %>%
         clearGroup("egg")
     }
