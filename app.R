@@ -493,7 +493,6 @@ server <- shinyServer(function(input, output, session) {
   names(sessionStart) <- "sessionStart"
   sessionID <- paste(stri_rand_strings(1, 5), gsub("\\.", "-", sessionStart) , "places", sep="-")
   names(sessionID) <- "sessionID"
-  values <- reactiveValues(layers = c())
   observe({
     # Trigger this observer every time an input changes
     reactiveValuesToList(input)
@@ -1562,7 +1561,7 @@ server <- shinyServer(function(input, output, session) {
   # City Bridges
   observe({
     if (input$toggleBridges) {
-      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Bridges<center></div></font>')), type = "message", id = "streetsMessage", duration = NULL, closeButton = FALSE)
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Bridges<center></div></font>')), type = "message", id = "bridgesMessage", duration = NULL, closeButton = FALSE)
       bridges <- bridgesInput()
       if (nrow(bridges@data) > 0) {
         values$layers <- unique(append(values$layers, "bridges"))
@@ -1599,8 +1598,6 @@ server <- shinyServer(function(input, output, session) {
                                       "<br><b>Type:</b>", parks$final_cat,
                                       ifelse(parks$maintenanceresponsibility == "", "", paste0("<br><b>Maintenance: </b>", parks$maintenanceresponsibility))))
         )
-      } else {
-        values$layers <- values$layers[which(values$layers != "parks")]
       }
       greenways <- greenwaysInput()
       if (nrow(greenways@data) > 0) {
@@ -1858,8 +1855,7 @@ server <- shinyServer(function(input, output, session) {
                       popup = ~(paste("<font color='black'><b>Region:</b>", environmental$layer,
                                       ifelse(is.na(environmental$name), "", paste("<br><b>Name:</b>", environmental$name)),
                                       '</font>'))
-          ) %>%
-          flyToBounds(environmental@bbox[1,1], environmental@bbox[2,1], environmental@bbox[1,2], environmental@bbox[2,2])
+          )
       }
     } else {
       leafletProxy("map", session = session) %>%
@@ -1877,7 +1873,6 @@ server <- shinyServer(function(input, output, session) {
       
       si <- siInput()
       if (nrow(si) > 0) {
-        values$layers <- unique(append(values$layers, "si"))
         leafletProxy("map", session = session) %>%
           addCircleMarkers(data = si, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2, group = "intersections",
                            popup = ~(paste("<font color='black'><b>Location:</b>", si$description,
@@ -1885,24 +1880,18 @@ server <- shinyServer(function(input, output, session) {
                                            ifelse(is.na(si$flash_time), "", paste("<br><b>Flash Time:</b>", si$flash_time)),
                                            ifelse(is.na(si$flash_yellow), "", paste("<br><b>Flash Yellow:</b>", si$flash_yellow)),"</font>"))
         )
-      } else {
-        values$layers <- values$layers[which(values$layers != "si")]
       }
       # Markings
       mark <- markInput()
       if (nrow(mark) > 0) {
-        values$layers <- unique(append(values$layers, "mark"))
         leafletProxy("map", session = session) %>%
           addPolylines(data = mark, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, group = "intersections",
                        popup = ~(paste("<font color='black'><b>Type:</b>", mark$type,
                                        "<br><b>Location:</b>", mark$street, "</font>"))
         )
-      } else {
-        values$layers <- values$layers[which(values$layers != "mark")]
       }
       signs <- signsInput()
       if (nrow(signs) > 0) {
-        values$layers <- unique(append(values$layers, "signs"))
         leafletProxy("map", session = session) %>%
           addCircleMarkers(data = signs, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2, group = "intersections",
                            popup = ~(paste0("<font color='black'><b>Sign Type:</b> ", signs$description, " (", signs$mutcd_code, ")",
@@ -1911,15 +1900,10 @@ server <- shinyServer(function(input, output, session) {
                                             ifelse(is.na(signs$date_installed),"" , paste0("<br><b>Installed Date:</b> ", signs$date_installed))))
 
         )
-      } else {
-        values$layers <- values$layers[which(values$layers != "signs")]
       }
     } else {
       leafletProxy("map", session = session) %>%
         clearGroup("intersections")
-      values$layers <- values$layers[which(values$layers != "si")]
-      values$layers <- values$layers[which(values$layers != "mark")]
-      values$layers <- values$layers[which(values$layers != "signs")]
     }
     removeNotification("interMessage")
   })
