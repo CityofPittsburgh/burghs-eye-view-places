@@ -1801,12 +1801,13 @@ server <- shinyServer(function(input, output, session) {
   # Waste Recovery Sites
   observe({
     if (input$toggleWaste) {
+      leafletProxy("map", session = session) %>%
+        clearGroup("waste")
       showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Waste Recovery Sites<center></div></font>')), type = "message", id = "poolsMessage", duration = NULL, closeButton = FALSE)
       
       waste <- wasteInput()
       if (nrow(waste) > 0) {
         leafletProxy("map", session = session) %>%
-          clearGroup("waste") %>%
           addCircleMarkers(data = waste, color = "#099fff", fillColor = "#099fff", fillOpacity = .5, radius = 8, group = "waste",
                            popup = ~(paste("<font color='black'><b>Name:</b>", waste$link,
                                            "<br><b>City Location:</b>", waste$managed_by_city,
@@ -1827,6 +1828,9 @@ server <- shinyServer(function(input, output, session) {
   observe({
     if (input$toggleHistoric) {
       showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Historical Districts<center></div></font>')), type = "message", id = "histdistMessage", duration = NULL, closeButton = FALSE)
+      leafletProxy("map", session = session) %>%
+        clearGroup("hist")
+      
       histdist <- historicInput()
       if (nrow(histdist@data) > 0) {
         leafletProxy("map", session = session) %>%
