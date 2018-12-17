@@ -612,7 +612,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      si <- si[apply(si, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      si <- si[apply(si@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(si)
@@ -773,7 +773,7 @@ server <- shinyServer(function(input, output, session) {
 
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      steps <- steps[apply(steps, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      steps <- steps[apply(steps@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(steps)
