@@ -95,7 +95,9 @@ getIds <- function(phrase) {
 }
 
 # Facility Usage
-facility_usage <- levels(as.factor(c("Cabin", "Community", "Concession", "Firehouse", "Medic Station", "Office", "Police", "Recycling", "Salt Dome", "Service", "Shelter", "Storage", "Training", "Utility", "Vacant", "Storage")))
+facility_usage <- toTitleCase(tolower(ckanUniques("fbb50b02-2879-47cd-abea-ae697ec05170", "type")$type))
+facility_usage <- sort(facility_usage[!is.na(facility_usage)])
+
 
 # Load Recreation Types
 court_types <- ckanUniques("a5b71bfa-840c-4c86-8f43-07a9ae854227", "type")$type
@@ -109,7 +111,7 @@ park_df <- jsonlite::fromJSON(parks_c)
 
 park_types <- unique(park_df$features$attributes$final_cat)
 
-rec_types <- sort(c(court_types, field_usages, park_types, "Activity", "Recreation", "Dugout", "Pool/Recreation", "Concession", "Greenway", "Playground"))
+rec_types <- sort(c(court_types, field_usages, park_types, "Greenway", "Playground"))
 
 # Environmental Select
 enviornmental_layers <- c("Flood Zone", "Landslide Prone", "Undermined Area")
@@ -893,66 +895,6 @@ server <- shinyServer(function(input, output, session) {
     
     return(pools)
   })
-  # Load Pools Facilities
-  datPoolsFacilitiesLoad <- reactive({
-    facilities <- datFacilitiesAllLoad()
-    
-    # Pools Facilities
-    poolsfacilities <- facilities[facilities@data$usage %in%  c("Pool", "Pool - Closed"),]
-    poolsfacilities@data$usage <- as.factor(poolsfacilities@data$usage)
-    
-    return(poolsfacilities)
-  })
-  # Pools Facilities Data & Filters
-  poolsfacilitiesInput <- reactive({
-    poolsfacilities <- datPoolsFacilitiesLoad()
-    
-    # Usage Filter
-    if (length(input$water_select) > 0) {
-      poolsfacilities <- poolsfacilities[poolsfacilities@data$usage %in% input$water_select,]
-    }
-    # Rentable Filter
-    if (input$rentable_select != "") {
-      poolsfacilities <- poolsfacilities[poolsfacilities$rentable %in% input$rentable_select,]
-    }
-    
-    # Search Filter
-    if (!is.null(input$search) & input$search != "") {
-      poolsfacilities <- poolsfacilities[apply(poolsfacilities@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
-    }
-    
-    return(poolsfacilities)
-  })
-  # Load RecFacilities
-  datRecFacilitiesLoad <- reactive({
-    facilities <- datFacilitiesAllLoad()
-    
-    # Rec Centers
-    recfacilities <- facilities[facilities@data$usage %in%  c("Activity", "Recreation", "Dugout", "Pool/Recreation", "Concession"),]
-    recfacilities$usage <- as.factor(recfacilities$usage)
-    
-    return(recfacilities)
-  })
-  # Rec Facilities Data & Filters
-  recfacilitiesInput <- reactive({
-    recfacilities <- datRecFacilitiesLoad()
-    
-    # Usage Filter
-    if (length(input$recreation_select) > 0) {
-      recfacilities <- recfacilities[recfacilities@data$usage %in% input$recreation_select,]
-    }
-    # Rentable Filter
-    if (input$rentable_select != "") {
-      recfacilities <- recfacilities[recfacilities$rentable %in% input$rentable_select,]
-    }
-    
-    # Search Filter
-    if (!is.null(input$search) & input$search != "") {
-      recfacilities <- recfacilities[apply(recfacilities@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
-    }
-    
-    return(recfacilities)
-  })
   # Load Parks
   datLoadParks <- reactive({
     parks <- readOGR("https://opendata.arcgis.com/datasets/c39ca624271a4fe0afe7087a9ea805f9_0.geojson")
@@ -1133,35 +1075,22 @@ server <- shinyServer(function(input, output, session) {
     
     return(environmental)
   })
-  datFacilitiesAllLoad <- reactive({
+  facilitiesLoad <- reactive({
     # Load facilities
     facilities <- readOGR("http://wprdc.ogopendata.com/dataset/e33e12d9-1268-45ed-ae47-ae3a76dcc0aa/resource/fd532423-b0ec-4028-98ff-5d414c47e01a/download/facilitiesimg.geojson")
     # Create Adress Column (checks to see if Address No. is valid, to add number and add space between street name)
     facilities@data$address <- paste0(ifelse(is.na(facilities@data$address_number), "", paste0(as.character(as.integer(facilities@data$address_number)), " ")), ifelse(is.na(facilities@data$street), "", as.character(facilities@data$street)))
-    facilities@data$type <- as.factor(facilities@data$type)
-    # Clean Facility Type for humans
-    facilities@data <- transform(facilities@data, usage = as.factor(mapvalues(type, c("ACTIVITY", "CABIN", "COMMUNITY", "CONCESSION", "DUGOUT", "FIREHOUSE" , "MEDIC STATION", "OFFICE", "POLICE", "POOL", "POOL CLOSED", "POOL/REC", "REC", "RECYCLING", "RESTROOMS", "SALT DOME", "SENIOR", "SERVICE", "SHELTER", "STORAGE", "TRAINING", "UTILITY", "VACANT", NA),
-                                                                                        c("Activity", "Cabin", "Community", "Concession", "Dugout", "Firehouse", "Medic Station", "Office", "Police", "Pool", "Pool - Closed", "Pool/Recreation", "Recreation", "Recycling", "Restrooms", "Salt Dome", "Senior Center", "Service", "Shelter", "Storage", "Training", "Utility", "Vacant", "Storage"))))
     # Create Tooltip
+    facilities@data$usage <- as.factor(toTitleCase(tolower(facilities@data$type)))
     facilities@data$rentable <- as.factor(facilities@data$rentable)
     facilities@data$url <- ifelse(facilities@data$rentable == 1, '<br><center><a href="https://registerparks.pittsburghpa.gov/" target="_blank">Rent this facility</a></center>', "")
     facilities@data$rentable <- ifelse(facilities@data$rentable == 1, "Yes", "No")
     
     return(facilities)
   })
-  datFacilitiesOnlyLoad <- reactive({
-    facilities <- datFacilitiesAllLoad()
-    
-    # Remove Stuff
-    facilities <- facilities[!facilities@data$usage %in%  c("Activity", "Recreation", "Dugout", "Pool/Recreation", "Pool", "Pool - Closed"),]
-    facilities@data$usage <- as.character(facilities@data$usage)
-    facilities@data$usage <- as.factor(facilities@data$usage)
-    
-    return(facilities)
-  })
   # City Facilities data with filters
   facilitiesInput <- reactive({
-    facilities <- datFacilitiesOnlyLoad ()
+    facilities <- facilitiesLoad ()
     
     # Usage Filter
     if (length(input$usage_select) > 0) {
@@ -1202,13 +1131,6 @@ server <- shinyServer(function(input, output, session) {
       colnames(wf) <- c("Feature Type", "Name", "Make", "Control Type")
       
       report <- wf
-    } else if (input$report_select == "Recreation Facilities") {
-      recfacilities <- recfacilitiesInput()
-      
-      recfacilities <- select(recfacilities@data, c(usage, name, primary_user, address))
-      colnames(recfacilities) <- c("Usage", "Description", "Dept", "Location")
-      
-      report <- recfacilities
     } else if (input$report_select == "City Bridges") {
       bridges <- bridgesInput()
       
@@ -1253,21 +1175,11 @@ server <- shinyServer(function(input, output, session) {
       report <- fields
     } else if (input$report_select == "Pools & Spray Parks") {
       pools <- poolsInput()
-      poolsfacilities <- poolsfacilitiesInput()
       
       pools <- select(pools@data, c(name, type, water_source, capacity))
+      colnames(pools) <- c("Name", "Type", "Water Source", "Capacity (gal)")
       
-      poolsfacilities <- select(poolsfacilities@data,c(name, usage))
-      poolsfacilities$water_source <- NA
-      poolsfacilities$capacity <- NA
-      
-      pools_all <- rbind(pools, poolsfacilities)
-      colnames(pools_all) <- c("Name", "Type", "Water Source", "Capacity (gal)")
-      
-      pools_all$Name <- as.character(pools_all$Name)
-      pools_all <- pools_all[order(pools_all$Name),] 
-      
-      report <- pools_all
+      report <- pools
     } else if (input$report_select == "Traffic Signals") {
       si <- siInput()
 
@@ -1558,20 +1470,6 @@ server <- shinyServer(function(input, output, session) {
                                       "<br><b>Location:</b>", playgrounds$street,
                                       "<br><b>Park:</b>", playgrounds$park, "</font>"))
         )
-      }
-      #Rec Facilities
-      recfacilities <- recfacilitiesInput()
-      if (nrow(recfacilities) > 0) {
-        print("recfac")
-        leafletProxy("map", session = session) %>%
-          addPolygons(data = recfacilities, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5, group = "recreation",
-                      popup = ~(paste(ifelse(recfacilities$image == "", "", paste0('<center><img id="imgPicture" src="', recfacilities$image,'" style="width:250px;"></center>')),
-                                      "<font color='black'><b>Name:</b>", recfacilities$name,
-                                      "<br><b>Location:</b>", recfacilities$address,
-                                      "<br><b>Usage:</b>", recfacilities$usage,
-                                      "<br><b>Dept:</b>", recfacilities$primary_user,
-                                      recfacilities$url, "</font>"))
-          )
       }
       # Court & Rinks
       courts <- courtsInput()
