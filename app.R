@@ -1808,11 +1808,6 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(playgrounds) > 0) {
         layersCount <- layersCount + 1
       }
-      #Rec Facilities
-      recfacilities <- recfacilitiesInput()
-      if (nrow(recfacilities) > 0) {
-        layersCount <- layersCount + 1
-      }
       # Court & Rinks
       courts <- courtsInput()
       if(nrow(courts) > 0) {
