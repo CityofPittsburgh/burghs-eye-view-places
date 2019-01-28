@@ -599,7 +599,7 @@ server <- shinyServer(function(input, output, session) {
   signsLoad <- reactive({
     signs <- ckan("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c")
     
-    return(signs_df)
+    return(signs)
     })  
   signsInput <- reactive({
     signs <- signsLoad()
