@@ -327,7 +327,7 @@ ui <- function(request) {
                     HTML('</font>'),
                     selectInput("usage_select",
                                 label = NULL,
-                                c(`Asset Usage`='', facility_usage),
+                                c(`Facility Usage`='', facility_usage),
                                 multiple = TRUE,
                                 selectize = TRUE),
                     selectInput("rentable_select",
