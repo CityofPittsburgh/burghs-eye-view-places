@@ -95,7 +95,7 @@ getIds <- function(phrase) {
 }
 
 # Facility Usage
-facility_usage <- levels(as.factor(c("Cabin", "Community", "Concession", "Firehouse", "Medic Station", "Office", "Police", "Recycling", "Salt Dome", "Service", "Shelter", "Storage", "Training", "Utility", "Vacant", "Storage", "Drinking Fountain", "Decorative Water Fountain")))
+facility_usage <- levels(as.factor(c("Cabin", "Community", "Concession", "Firehouse", "Medic Station", "Office", "Police", "Recycling", "Salt Dome", "Service", "Shelter", "Storage", "Training", "Utility", "Vacant", "Storage")))
 
 # Load Recreation Types
 court_types <- ckanUniques("a5b71bfa-840c-4c86-8f43-07a9ae854227", "type")$type
@@ -117,17 +117,19 @@ enviornmental_layers <- c("Flood Zone", "Landslide Prone", "Undermined Area")
 # Pools Select
 outdoor <- ckanUniques("5cc254fe-2cbd-4912-9f44-2f95f0beea9a", "type")$type
 
-pool_cat <- levels(as.factor(c(outdoor, "Spray Fountain", "Pool", "Pool - Closed")))
+pool_cat <- levels(as.factor(c(outdoor, "Spray Fountain", "Pool", "Pool - Closed", "Drinking Fountain", "Decorative Water Fountain")))
 
 # Intersections Selections
-signs <- ckanUniques("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c", "description")$description
 mark_type <- ckanUniques("f2f0c299-4f7b-4689-be3c-a2ad38252cf4", "type")$type
 
 si_type <- ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "operation_type")$operation_type
 si_type <- paste("Traffic Signal -", si_type)
 si_type <- ifelse(si_type == "Traffic Signal - NA", "Traffic Signal - Other", si_type)
 
-intersection_type <- levels(as.factor(c(signs, mark_type, si_type)))
+intersection_type <- levels(as.factor(c(mark_type, si_type)))
+
+# Street Sign Types
+sign_types <- sort(ckanUniques("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c", "description")$description)
 
 flash_times <- levels(as.factor(c(ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "flash_time")$flash_time)))
 
@@ -317,8 +319,8 @@ ui <- function(request) {
                     HTML('<button class="btn collapsed" data-toggle="collapse" data-target="#mobile" stye="display: block;"><i class="fa fa-search-plus" aria-hidden="true"></i></button></div>
                          <div id="mobile" class="collapse" style="margin-top:55px;">'),
                     HTML('<font color="#ff7f00">'),
-                    checkboxInput("toggleAssets",
-                                  label = "City Assets",
+                    checkboxInput("toggleFacilities",
+                                  label = "City Facilities",
                                   value = TRUE),
                     HTML('</font>'),
                     selectInput("usage_select",
@@ -382,7 +384,7 @@ ui <- function(request) {
                                 step = 1),
                     HTML('<font color="#377eb8">'),
                     checkboxInput("togglePools",
-                                  label = "Pools & Spray Parks",
+                                  label = "Pools, Spray Parks & Water Feautures",
                                   value = FALSE),
                     HTML('</font>'),
                     selectInput("water_select",
@@ -415,6 +417,16 @@ ui <- function(request) {
                                 c(`Region Type` ='', enviornmental_layers),
                                 multiple = TRUE,
                                 selectize = TRUE),
+                    HTML('<font color="#000000">'),
+                    checkboxInput("toggleSigns",
+                                  label = "Street Signs",
+                                  value = FALSE),
+                    HTML('</font>'),
+                    selectInput("sign_select",
+                                label = NULL,
+                                c(`Sign Type` ='', sign_types),
+                                multiple = TRUE,
+                                selectize = TRUE),
                     HTML('<font color="#e41a1c">'),
                     checkboxInput("toggleIntersections",
                                   label = "Intersections",
@@ -444,8 +456,8 @@ ui <- function(request) {
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Assets", "City Bridges", "City Signs", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Markings", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Waste Recovery Sites"), #
-                                        selected= "City Assets"),
+                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Facilities", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Pavement Markings", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Street Signs", "Waste Recovery Sites", "Water Features"), #
+                                        selected= "City Facilities"),
                             # Define Button Position
                             uiOutput("buttonStyle")
                           ),
@@ -511,7 +523,7 @@ server <- shinyServer(function(input, output, session) {
     }
   })
   # Load All Water Features
-  datWfLoadAll <- reactive({
+  wfLoad <- reactive({
     # Load Water Features
     wf <- readOGR("http://wprdc.ogopendata.com/dataset/fe7cfb11-9f33-4590-a5ee-04419f3f974a/resource/f7c252a5-28be-43ab-95b5-f3eb0f1eef67/download/wfimg.geojson")
     # Remove Inactive Water Features
@@ -523,23 +535,13 @@ server <- shinyServer(function(input, output, session) {
     
     return(wf)
   })
-  # Load Water Features
-  datWLoadfOnly <- reactive({
-    wf <- datWfLoadAll()
-    
-    # Remove Spray
-    wf <- wf[wf$feature_type != "Spray Fountain",]
-    wf$feature_type <- as.factor(wf$feature_type)
-    
-    return(wf)
-  })
   # Water Features Data with filters
   wfInput <- reactive({
-    wf <- datWLoadfOnly()
+    wf <- wfLoad()
     
     # Feature Filter
-    if (length(input$usage_select) > 0) {
-      wf <- wf[wf$feature_type %in% input$usage_select,]
+    if (length(input$water_select) > 0) {
+      wf <- wf[wf$feature_type %in% input$water_select,]
     }
     
     # Rentable Filter
@@ -553,32 +555,6 @@ server <- shinyServer(function(input, output, session) {
     }
     
     return(wf)
-  })
-  # Load Spray Features
-  datSprayLoad <- reactive({
-    wf <- datWfLoadAll()
-    
-    # Load Spray
-    spray <- wf[wf$feature_type == "Spray Fountain",]
-    spray$feature_type <- as.factor(spray$feature_type)
-    
-    return(spray)
-  })
-  # Spray Data with Filters
-  sprayInput <- reactive({
-    spray <- datSprayLoad()
-    
-    # Feature Filter
-    if (length(input$water_select) > 0) {
-      spray <- spray[spray$feature_type %in% input$water_select,]
-    }
-    
-    # Search Filter
-    if (!is.null(input$search) & input$search != "") {
-      spray <- spray[apply(spray@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
-    }
-    
-    return(spray)
   })
   # Load Signalized Intersections
   datSiLoad <- reactive({
@@ -628,8 +604,8 @@ server <- shinyServer(function(input, output, session) {
     signs <- signsLoad()
     
     # Operation Type Filter
-    if (length(input$intersection_select) > 0) {
-      signs <- signs[signs$description %in% input$intersection_select,]
+    if (length(input$sign_select) > 0) {
+      signs <- signs[signs$description %in% input$sign_select,]
     }
 
     # Search Filter
@@ -1184,7 +1160,7 @@ server <- shinyServer(function(input, output, session) {
     
     return(facilities)
   })
-  # City Assets data with filters
+  # City Facilities data with filters
   facilitiesInput <- reactive({
     facilities <- datFacilitiesOnlyLoad ()
     
@@ -1205,28 +1181,28 @@ server <- shinyServer(function(input, output, session) {
     return(facilities)
   })
   # Generate table for Data page and export
-  # Note all reports do same data process comments only exist for 311
   reportInput <- reactive({
-    if (input$report_select == "City Assets") {
+    if (input$report_select == "City Facilities") {
       facilities <- facilitiesInput()
-      wf <- wfInput()
       
       facilities <- subset(facilities@data, select = c(usage, name, primary_user, address))
       colnames(facilities) <- c("Usage", "Description", "Dept", "Location")
       
-      wf$Dept <- "DEPARTMENT OF PUBLIC WORKS"
-      wf$Location <- NA
-      wf <- subset(wf@data, select = c(feature_type, name,  Dept, Location))
-      colnames(wf) <- c("Usage", "Description", "Dept", "Location")
-      
-      report <- rbind(facilities, wf)
+      report <- facilities
     } else if (input$report_select == "Carnegie Library of Pittsburgh Locations") {
       libs <- libsInput()
       
       libs <- subset(libs, select = c(Name, full_address, Phone, MoOpen_tt, MoClose_tt, TuOpen_tt, TuClose_tt, WeOpen_tt, WeClose_tt, ThOpen_tt, ThClose_tt,  FrOpen_tt, FrClose_tt, SaOpen_tt, SaClose_tt, SuOpen_tt, SuClose_tt))
       colnames(libs) <- c("Name", "Address", "Phone", "Mon Open", "Mon Close", "Tue Open", "Tue Close", "Wed Open", "Wed Close", "Thu Open", "Thu Close", "Fri Open", "Fri Close", "Sat Open", "Sat Close", "Sun Open", "Sun Close")
       
-      return(libs)
+      report <- libs
+    } else if (input$reports_select == "Water Features") {
+      wf <- wfInput()
+      
+      wf <- subset(wf@data, select = c(feature_type, name, make , control_type))
+      colnames(wf) <- c("Feature Type", "Name", "Make", "Control Type")
+      
+      report <- wf
     } else if (input$report_select == "Recreation Facilities") {
       recfacilities <- recfacilitiesInput()
       
@@ -1279,27 +1255,21 @@ server <- shinyServer(function(input, output, session) {
     } else if (input$report_select == "Pools & Spray Parks") {
       pools <- poolsInput()
       poolsfacilities <- poolsfacilitiesInput()
-      spray <- sprayInput()
       
       pools <- subset(pools@data, select =  c(name, type, water_source, capacity))
-      
-      spray <- subset(spray@data, select =  c(name, feature_type))
-      colnames(spray) <- c("name", "type")
-      spray$water_source <- NA
-      spray$capacity <- NA
       
       poolsfacilities <- subset(poolsfacilities@data, select = c(name, usage))
       colnames(poolsfacilities) <- c("name", "type")
       poolsfacilities$water_source <- NA
       poolsfacilities$capacity <- NA
       
-      pools_spray <- rbind(spray, pools, poolsfacilities)
-      colnames(pools_spray) <- c("Name", "Type", "Water Source", "Capacity (gal)")
+      pools_all <- rbind(pools, poolsfacilities)
+      colnames(pools_all) <- c("Name", "Type", "Water Source", "Capacity (gal)")
       
-      pools_spray$Name <- as.character(pools_spray$Name)
-      pools_spray <- pools_spray[order(pools_spray$Name),] 
+      pools_all$Name <- as.character(pools_all$Name)
+      pools_all <- pools_all[order(pools_all$Name),] 
       
-      report <- pools_spray
+      report <- pools_all
     } else if (input$report_select == "Traffic Signals") {
       si <- siInput()
 
@@ -1307,19 +1277,20 @@ server <- shinyServer(function(input, output, session) {
       colnames(si) <- c("Location", "Operation Type", "Flash Time", "Flash Yellow")
       
       report <- si
-    } else if (input$report_select == "Markings"){
+    } else if (input$report_select == "Pavement Markings"){
       mark <- markInput()
       
       mark <- subset(mark@data, select = c(type, street))
       colnames(mark) <- c("Type", "Street")
     
       report <- mark
-    } else if (input$report_select == "City Signs") {
+    } else if (input$report_select == "Street Signs") {
       signs <- signsInput()
       
       signs <- subset(signs@data, select = c(description, mutcd_code, address_number, street, mounting_fixture, date_installed))
       colnames(signs) <- c("Sign Type", "MUTCD Code", "Address No.", "Street", "Mounting Fixture", "Installed")
       
+      report <- signs
     } else if (input$report_select == "Paving Schedule") {
       streets <- streetsInput()
       
@@ -1342,6 +1313,7 @@ server <- shinyServer(function(input, output, session) {
       
       report <- walls
     } 
+    
     return(report)
   })
   downloadInput <- reactive({
@@ -1355,14 +1327,6 @@ server <- shinyServer(function(input, output, session) {
   })
   # Generate Report Table
   output$report.table <- DT::renderDataTable({
-    if (url.exists(paste0(couchdb_url, ":5984/_utils/"))){
-      dateTime <- Sys.time()
-      names(dateTime) <- "dateTime"
-      inputs <- isolate(reactiveValuesToList(input))
-      couchDB$dataList <- c(inputs, sessionID, dateTime, sessionStart)
-      cdbAddDoc(couchDB)
-    }
-    # Load Report dataset
     reportInput()
   }, escape = FALSE, options = list(scrollX = TRUE), rownames= FALSE)
   # Execute download function
@@ -1486,8 +1450,8 @@ server <- shinyServer(function(input, output, session) {
   })
   # City Places Layer
   observe({
-      if (input$toggleAssets) {
-        showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Assets<center></div></font>')), type = "message", id = "cityMessage", duration = NULL, closeButton = FALSE)
+      if (input$toggleFacilities) {
+        showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Facilities<center></div></font>')), type = "message", id = "cityMessage", duration = NULL, closeButton = FALSE)
         leafletProxy("map", session = session) %>%
           clearGroup("facilities")
         facilities <- facilitiesInput()
@@ -1500,17 +1464,6 @@ server <- shinyServer(function(input, output, session) {
                                         "<br><b>Usage:</b>", facilities$usage,
                                         "<br><b>Dept:</b>", facilities$primary_user,
                                         facilities$url, "</font>"))
-          )
-        }
-        wf <- wfInput()
-        if (nrow(wf) > 0) {
-          leafletProxy("map", session = session) %>%
-            addCircleMarkers(data = wf, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, radius = 2, group = "facilities",
-                             popup = ~(paste(ifelse(wf$image == "", "", paste0('<center><img id="imgPicture" src="', wf$image,'" style="width:250px;"></center>')),
-                                             "<font color='black'><b>Location:</b>", wf$name,
-                                             "<br><b>Feature Type:</b>", wf$feature_type,
-                                             ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
-                                             ifelse(is.na(wf$control_type), "", paste("<br><b>Control:</b>", wf$control_type)),"</font>"))
           )
         }
       } else {
@@ -1764,17 +1717,6 @@ server <- shinyServer(function(input, output, session) {
                                       ifelse(is.na(pools$capacity), "", paste("<br><b>Capacity:</b>", prettyNum(pools$capacity, big.mark = ","),"gal")), "</font>"))
                       )
       }
-      spray <- sprayInput()
-      if (nrow(spray) > 0) {
-        leafletProxy("map", session = session) %>%
-          addCircleMarkers(data = spray, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, radius = 4, group = "pools",
-                           popup = ~(paste(ifelse(spray$image == "", "", paste0('<center><img id="imgPicture" src="', spray$image,'" style="width:250px;"></center>')),
-                                           "<font color='black'><b>Location:</b>", spray$name,
-                                           "<br><b>Usage:</b>", spray$feature_type,
-                                           ifelse(is.na(spray$make) | spray$make == "", "", paste("<br><b>Make:</b>", spray$make)),
-                                           ifelse(is.na(spray$control_type) | spray$control_type == "", "", paste("<br><b>Control:</b>", spray$control_type)),"</font>"))
-        )
-      }
       poolsfacilities <- poolsfacilitiesInput()
       if (nrow(poolsfacilities) > 0 ) {
         leafletProxy("map", session = session) %>%
@@ -1786,6 +1728,17 @@ server <- shinyServer(function(input, output, session) {
                                       "<br><b>Dept:</b>", poolsfacilities$primary_user,
                                       poolsfacilities$url, "</font>"))
         )
+      }
+      wf <- wfInput()
+      if (nrow(wf) > 0) {
+        leafletProxy("map", session = session) %>%
+          addCircleMarkers(data = wf, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, radius = 2, group = "pools",
+                           popup = ~(paste(ifelse(wf$image == "", "", paste0('<center><img id="imgPicture" src="', wf$image,'" style="width:250px;"></center>')),
+                                           "<font color='black'><b>Location:</b>", wf$name,
+                                           "<br><b>Feature Type:</b>", wf$feature_type,
+                                           ifelse(is.na(wf$make), "", paste("<br><b>Make:</b>", wf$make)),
+                                           ifelse(is.na(wf$control_type), "", paste("<br><b>Control:</b>", wf$control_type)),"</font>"))
+          )
       }
     } else {
       leafletProxy("map", session = session) %>%
@@ -1887,10 +1840,23 @@ server <- shinyServer(function(input, output, session) {
                                        "<br><b>Location:</b>", mark$street, "</font>"))
         )
       }
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("intersections")
+    }
+    removeNotification("interMessage")
+  })
+  # Traffic Signs
+  observe({
+    if (input$toggleSigns) {
+      leafletProxy("map", session = session) %>%
+        clearGroup("intersections")
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Street Sign Data<center></div></font>')), type = "message", id = "signMessage", duration = NULL, closeButton = FALSE)
+      
       signs <- signsInput()
       if (nrow(signs) > 0) {
         leafletProxy("map", session = session) %>%
-          addCircleMarkers(data = signs, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2, group = "intersections",
+          addCircleMarkers(data = signs, color = "#000000", fillColor = "#000000", fillOpacity = .5, radius = 2, group = "signs",
                            popup = ~(paste0("<font color='black'><b>Sign Type:</b> ", signs$description, " (", signs$mutcd_code, ")",
                                             "<br><b>Location:</b> ", paste(signs$address_number, signs$street),
                                             "<br><b>Mounting Fixture:</b> ", signs$mounting_fixture,
@@ -1900,21 +1866,17 @@ server <- shinyServer(function(input, output, session) {
       }
     } else {
       leafletProxy("map", session = session) %>%
-        clearGroup("intersections")
+        clearGroup("signs")
     }
-    removeNotification("interMessage")
+    removeNotification("signMessage")
   })
   # Easter Egg check to see what layers are active and if they have any data
   observe({
     layersCount <- 0
-    # City Assets
-    if (input$toggleAssets) {
+    # City Facilities
+    if (input$toggleFacilities) {
       facilities <- facilitiesInput()
       if (nrow(facilities) > 0) {
-        layersCount <- layersCount + 1
-      }
-      wf <- wfInput()
-      if (nrow(wf) > 0) {
         layersCount <- layersCount + 1
       }
     }
@@ -1992,8 +1954,8 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(pools) > 0) {
         layersCount <- layersCount + 1
       }
-      spray <- sprayInput()
-      if (nrow(spray) > 0) {
+      wf <- wfInput()
+      if (nrow(wf) > 0) {
         layersCount <- layersCount + 1
       }
       poolsfacilities <- poolsfacilitiesInput()
@@ -2034,6 +1996,8 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(mark) > 0) {
         layersCount <- layersCount + 1
       }
+    }
+    if (input$toggleSigns) {
       # Signs
       signs <- signsInput()
       if (nrow(signs) > 0) {
