@@ -529,7 +529,7 @@ server <- shinyServer(function(input, output, session) {
     # Load Water Features
     wf <- ckan("513290a6-2bac-4e41-8029-354cbda6a7b7")
     # Remove Inactive Water Features
-    wf <- wf[wf$inactive == 0,]
+    wf <- wf[wf$inactive == "f",]
     # Prepare for Merge to Facilities
     wf <- transform(wf, feature_type = as.factor(mapvalues(feature_type, c("Spray", "Decorative"), c("Spray Fountain", "Decorative Water Fountain"))))
     wf$feature_type <- as.character(wf$feature_type)
@@ -874,14 +874,14 @@ server <- shinyServer(function(input, output, session) {
     return(bridges)
   })
   # Load Pools
-  datPoolsLoad <- reactive({
+  poolsLoad <- reactive({
     pools <- readOGR("http://wprdc.ogopendata.com/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson")
     
     return(pools)
   })
   # Pools Data with Filters
   poolsInput <- reactive({
-    pools <- datPoolsLoad()
+    pools <- poolsLoad()
     
     # Usage Filter
     if (length(input$water_select) > 0) {
@@ -1323,11 +1323,11 @@ server <- shinyServer(function(input, output, session) {
       load.egg$icon <- "july_4"
       load.egg$tt <- "<i>Happy Independence Day! Looks like you need to try another search term.</i>"
     } else if (Sys.Date() >= as.Date(paste0(this_year,"-05-01")) & Sys.Date() <= as.Date(paste0(this_year,"-08-31"))) {
-      load.pools <- readOGR("https://data.wprdc.org/dataset/f7067c4e-0c1e-420c-8c31-f62769fcd29a/resource/77288f26-54a1-4c0c-bc59-7873b1109e76/download/poolsimg.geojson")
-      load.egg <- data.frame(coordinates(load.pools))
-      colnames(load.egg) <- c("X","Y")
-      load.egg$icon <- "summer"
-      load.egg$tt <- "<i>Ah... Summer! Chill out, relax and grab some rays with me. Or if you'd like try another search term.</i>"
+      load.pools <- ckan("5cc254fe-2cbd-4912-9f44-2f95f0beea9a") %>%
+        rename(X = latitude,
+               Y = longitude) %>%
+        mutate(icon = "summer",
+               tt = "<i>Ah... Summer! Chill out, relax and grab some rays with me. Or if you'd like try another search term.</i>")
     } else {
       X <- c(-79.9968604, -80.004055)
       Y <- c(40.4381098, 40.440631)
@@ -1613,18 +1613,6 @@ server <- shinyServer(function(input, output, session) {
                                       ifelse(is.na(pools$capacity), "", paste("<br><b>Capacity:</b>", prettyNum(pools$capacity, big.mark = ","),"gal")), "</font>"))
                       )
       }
-      poolsfacilities <- poolsfacilitiesInput()
-      if (nrow(poolsfacilities) > 0 ) {
-        leafletProxy("map", session = session) %>%
-          addPolygons(data = poolsfacilities, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, group = "pools",
-                      popup = ~(paste(ifelse(poolsfacilities$image == "", "", paste0('<center><img id="imgPicture" src="', poolsfacilities$image, '" style="width:250px;"></center>')),
-                                      "<font color='black'><b>Name:</b>", poolsfacilities$name,
-                                      "<br><b>Location:</b>", poolsfacilities$address,
-                                      "<br><b>Usage:</b>", poolsfacilities$usage,
-                                      "<br><b>Dept:</b>", poolsfacilities$primary_user,
-                                      poolsfacilities$url, "</font>"))
-        )
-      }
       wf <- wfInput()
       if (nrow(wf) > 0) {
         leafletProxy("map", session = session) %>%
@@ -1848,10 +1836,6 @@ server <- shinyServer(function(input, output, session) {
       }
       wf <- wfInput()
       if (nrow(wf) > 0) {
-        layersCount <- layersCount + 1
-      }
-      poolsfacilities <- poolsfacilitiesInput()
-      if (nrow(poolsfacilities) > 0 ) {
         layersCount <- layersCount + 1
       }
     }
