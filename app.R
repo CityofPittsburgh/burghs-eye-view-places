@@ -525,11 +525,11 @@ server <- shinyServer(function(input, output, session) {
   # Load All Water Features
   wfLoad <- reactive({
     # Load Water Features
-    wf <- readOGR("http://wprdc.ogopendata.com/dataset/fe7cfb11-9f33-4590-a5ee-04419f3f974a/resource/f7c252a5-28be-43ab-95b5-f3eb0f1eef67/download/wfimg.geojson")
+    wf <- ckan("513290a6-2bac-4e41-8029-354cbda6a7b7")
     # Remove Inactive Water Features
     wf <- wf[wf$inactive == 0,]
     # Prepare for Merge to Facilities
-    wf@data <- transform(wf@data, feature_type = as.factor(mapvalues(feature_type, c("Spray", "Decorative"), c("Spray Fountain", "Decorative Water Fountain"))))
+    wf <- transform(wf, feature_type = as.factor(mapvalues(feature_type, c("Spray", "Decorative"), c("Spray Fountain", "Decorative Water Fountain"))))
     wf$feature_type <- as.character(wf$feature_type)
     wf$rentable <- "No"
     
@@ -551,7 +551,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      wf <- wf[apply(wf@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      wf <- wf[apply(wf, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(wf)
@@ -596,7 +596,6 @@ server <- shinyServer(function(input, output, session) {
   # Stop
   signsLoad <- reactive({
     signs <- ckan("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c")
-    signs_df <- SpatialPointsDataFrame(cbind(signs$longitude, signs$latitude), signs)
     
     return(signs_df)
     })  
@@ -610,7 +609,7 @@ server <- shinyServer(function(input, output, session) {
 
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      signs <- signs[apply(signs@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      signs <- signs[apply(signs, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(signs)
@@ -800,20 +799,20 @@ server <- shinyServer(function(input, output, session) {
   # Load Waste Data
   datWasteLoad <- reactive({
     # Load Waste Recovery Sites
-    waste <- readOGR("http://wprdc.ogopendata.com/dataset/10dd50cf-bf29-4268-83e2-debcacea7885/resource/cdb6c800-3213-4190-8d39-495e36300263/download/wasterecoveryimg.geojson")
+    waste <- ckan("51f0c4f3-0ddd-4073-8f39-ad19d7528575")
     #Build Address
     waste$address <- paste0(ifelse(is.na(waste$address_number), "", paste0(as.character(as.integer(waste$address_number)), " ")), ifelse(is.na(waste$street), "", as.character(waste$street)), paste0(ifelse(is.na(waste$city) | waste$city == "", "", paste0(" ", as.character(waste$city), ", PA"))))
     # Build URL Link
     waste$link <- ifelse(waste$website == "", as.character(waste$name), paste0('<a href=', waste$website,' target="_blank">', waste$name, '</a>'))
     
-    waste$managed_by_city <- ifelse(waste@data$managed_by_city == 1, TRUE, FALSE)
+    waste$managed_by_city <- ifelse(waste$managed_by_city == 1, TRUE, FALSE)
     # Build Description
     waste$description <- ""
     for (i in levels(materials)) {
       col <- gsub(" ", "_", paste("accepts", tolower(i)))
       waste$description <- case_when(
-        waste@data[,col] == 1 & waste$description == "" ~ i,
-        waste@data[,col] == 1 & waste$description != "" ~ paste(waste$description, i, sep = ", "),
+        waste[,col] == 1 & waste$description == "" ~ i,
+        waste[,col] == 1 & waste$description != "" ~ paste(waste$description, i, sep = ", "),
         TRUE ~ waste$description
       )
     }
@@ -830,7 +829,7 @@ server <- shinyServer(function(input, output, session) {
       cols <- gsub(" ", "_", paste("accepts", tolower(input$materials_select)))
       count <- 1
       for (i in cols) {
-        temp <- waste[c(waste@data[i] == 1),]
+        temp <- waste[c(waste[i] == 1),]
         #Create DF
         if (count == 1) {
           count <- 2
@@ -844,12 +843,12 @@ server <- shinyServer(function(input, output, session) {
       waste <- spdf[rownames(unique(spdf@data)),]
     # Materials Select Filter for single
     } else if (length(input$materials_select) == 1) {
-      waste <- waste[c(waste@data[gsub(" ", "_", paste("accepts", tolower(input$materials_select)))] == 1),]
+      waste <- waste[c(waste[gsub(" ", "_", paste("accepts", tolower(input$materials_select)))] == 1),]
     }
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      waste <- waste[apply(waste@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      waste <- waste[apply(waste, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(waste)
@@ -1196,59 +1195,59 @@ server <- shinyServer(function(input, output, session) {
       colnames(libs) <- c("Name", "Address", "Phone", "Mon Open", "Mon Close", "Tue Open", "Tue Close", "Wed Open", "Wed Close", "Thu Open", "Thu Close", "Fri Open", "Fri Close", "Sat Open", "Sat Close", "Sun Open", "Sun Close")
       
       report <- libs
-    } else if (input$reports_select == "Water Features") {
+    } else if (input$report_select == "Water Features") {
       wf <- wfInput()
       
-      wf <- subset(wf@data, select = c(feature_type, name, make , control_type))
+      wf <- select(wf, c(feature_type, name, make , control_type))
       colnames(wf) <- c("Feature Type", "Name", "Make", "Control Type")
       
       report <- wf
     } else if (input$report_select == "Recreation Facilities") {
       recfacilities <- recfacilitiesInput()
       
-      recfacilities <- subset(recfacilities@data, select = c(usage, name, primary_user, address))
+      recfacilities <- select(recfacilities@data, c(usage, name, primary_user, address))
       colnames(recfacilities) <- c("Usage", "Description", "Dept", "Location")
       
       report <- recfacilities
     } else if (input$report_select == "City Bridges") {
       bridges <- bridgesInput()
       
-      bridges <- subset(bridges@data, select = c(name, start_neighborhood, end_neighborhood))
+      bridges <- select(bridges@data, c(name, start_neighborhood, end_neighborhood))
       colnames(bridges) <- c("Name", "Start Neighborhood", "End Neighborhood")
       
       report <- bridges
     } else if (input$report_select == "City Steps") {
       steps <- stepsInput()
       
-      steps <- subset(steps@data, select = c(name, installed, material, length, number_of_steps, total_population, transit_rider_count, schools_count, overall_score, transit_score, school_score, detour_score))
+      steps <- select(steps@data, c(name, installed, material, length, number_of_steps, total_population, transit_rider_count, schools_count, overall_score, transit_score, school_score, detour_score))
       colnames(steps) <- c("Name", "Year Installed", "Material", "Length (ft)", "# of Steps", "Total Pop.", "Transit Rider Count", "School Count", "Overall Score", "Transit Score", "School Score", "Detour Score")
       
       report <- steps
     } else if (input$report_select == "City Parks") {
       parks <- parksInput()
       
-      parks <- subset(parks@data, select = c(updatepknm, final_cat, maintenanceresponsibility))
+      parks <- select(parks@data, c(updatepknm, final_cat, maintenanceresponsibility))
       colnames(parks) <- c("Name", "Type", "Maintenance")
       
       report <- parks
     } else if (input$report_select == "Playgrounds") {
       playgrounds <- playgroundsInput()
       
-      playgrounds <- subset(playgrounds@data, select = c(name, street, park))
+      playgrounds <- select(playgrounds@data, c(name, street, park))
       colnames(playgrounds) <- c("Name", "Street", "Park")
       
       report <- playgrounds
     } else if (input$report_select == "Courts & Rinks") {
       courts <- courtsInput()
       
-      courts <- subset(courts@data, select = c(name, type, surface_material, grandstand, park, location))
+      courts <- select(courts@data, c(name, type, surface_material, grandstand, park, location))
       colnames(courts) <- c("Name", "Type", "Surface Material", "Grandstands", "Park", "Location")
       
       report <- courts
     } else if (input$report_select == "Playing Fields") {
       fields <- fieldsInput()
       
-      fields <- subset(fields@data, select = c(name, park, field_usage, goal_post, infield_type, has_lights, left_field_distance, center_field_distance, right_field_distance))
+      fields <- select(fields@data, c(name, park, field_usage, goal_post, infield_type, has_lights, left_field_distance, center_field_distance, right_field_distance))
       colnames(fields) <- c("Name", "Park", "Field Type", "Goal Posts", "Infield", "Lights", "Left Field", "Right Field", "Center Field")
       
       report <- fields
@@ -1256,10 +1255,9 @@ server <- shinyServer(function(input, output, session) {
       pools <- poolsInput()
       poolsfacilities <- poolsfacilitiesInput()
       
-      pools <- subset(pools@data, select =  c(name, type, water_source, capacity))
+      pools <- select(pools@data, c(name, type, water_source, capacity))
       
-      poolsfacilities <- subset(poolsfacilities@data, select = c(name, usage))
-      colnames(poolsfacilities) <- c("name", "type")
+      poolsfacilities <- select(poolsfacilities@data,c(name, usage))
       poolsfacilities$water_source <- NA
       poolsfacilities$capacity <- NA
       
@@ -1273,42 +1271,42 @@ server <- shinyServer(function(input, output, session) {
     } else if (input$report_select == "Traffic Signals") {
       si <- siInput()
 
-      si <- subset(si@data, select = c(description, operation_type, flash_time, flash_yellow))
+      si <- select(si@data, c(description, operation_type, flash_time, flash_yellow))
       colnames(si) <- c("Location", "Operation Type", "Flash Time", "Flash Yellow")
       
       report <- si
     } else if (input$report_select == "Pavement Markings"){
       mark <- markInput()
       
-      mark <- subset(mark@data, select = c(type, street))
+      mark <- select(mark@data, c(type, street))
       colnames(mark) <- c("Type", "Street")
     
       report <- mark
     } else if (input$report_select == "Street Signs") {
       signs <- signsInput()
       
-      signs <- subset(signs@data, select = c(description, mutcd_code, address_number, street, mounting_fixture, date_installed))
+      signs <- select(signs, c(description, mutcd_code, address_number, street, mounting_fixture, date_installed))
       colnames(signs) <- c("Sign Type", "MUTCD Code", "Address No.", "Street", "Mounting Fixture", "Installed")
       
       report <- signs
     } else if (input$report_select == "Paving Schedule") {
       streets <- streetsInput()
       
-      streets <- subset(streets@data, select = c(street, route_ahead, route_back, start_year, status))
+      streets <- select(streets@data, c(street, route_ahead, route_back, start_year, status))
       colnames(streets) <- c("Name", "Route Ahead", "Route Back", "Start Year", "Status")
       
       report <- streets
     } else if (input$report_select == "Waste Recovery Sites") {
       waste <- wasteInput()
       
-      waste <- subset(waste@data, select = c(link, managed_by_city, address, hours_of_operation, phone_number, description, notes))
+      waste <- select(waste, c(link, managed_by_city, address, hours_of_operation, phone_number, description, notes))
       colnames(waste) <- c("Name","City Location" ,"Location", "Hours", "Phone #", "Materials", "Notes")
       
       report <- waste
     } else if (input$report_select == "City Retaining Walls") {
       walls <- wallsInput()
       
-      walls <- subset(walls@data, select = c(name, street, year_constructed, to_street, length, height))
+      walls <- select(walls@data, c(name, street, year_constructed, to_street, length, height))
       colnames(walls) <- c("Name", "Street", "Year Constructed", "To Street", "Length (ft)", "Height (ft)")
       
       report <- walls
@@ -1732,7 +1730,7 @@ server <- shinyServer(function(input, output, session) {
       wf <- wfInput()
       if (nrow(wf) > 0) {
         leafletProxy("map", session = session) %>%
-          addCircleMarkers(data = wf, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, radius = 2, group = "pools",
+          addCircleMarkers(data = wf, color = "#377eb8", fillColor = "#377eb8", fillOpacity = .5, radius = 2, group = "pools", lat = ~latitude, lng = ~longitude,
                            popup = ~(paste(ifelse(wf$image == "", "", paste0('<center><img id="imgPicture" src="', wf$image,'" style="width:250px;"></center>')),
                                            "<font color='black'><b>Location:</b>", wf$name,
                                            "<br><b>Feature Type:</b>", wf$feature_type,
@@ -1757,6 +1755,7 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(waste) > 0) {
         leafletProxy("map", session = session) %>%
           addCircleMarkers(data = waste, color = "#099fff", fillColor = "#099fff", fillOpacity = .5, radius = 8, group = "waste",
+                           lng = ~longitude, lat = ~latitude,
                            popup = ~(paste("<font color='black'><b>Name:</b>", waste$link,
                                            "<br><b>City Location:</b>", waste$managed_by_city,
                                            "<br><b>Location:</b>", waste$address,
