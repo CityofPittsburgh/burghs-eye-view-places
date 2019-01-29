@@ -1743,7 +1743,7 @@ server <- shinyServer(function(input, output, session) {
         leafletProxy("map", session = session) %>%
           addCircleMarkers(data = signs, color = "#000000", fillColor = "#000000", fillOpacity = .5, radius = 2, group = "signs",
                            popup = ~(paste0("<font color='black'><b>Sign Type:</b> ", signs$description, " (", signs$mutcd_code, ")",
-                                            "<br><b>Location:</b> ", paste(signs$address_number, signs$street),
+                                            "<br><b>Location:</b> ", trimws(paste(ifelse(is.na(signs$address_number), "", signs$address_number), signs$street), "both"),
                                             "<br><b>Mounting Fixture:</b> ", signs$mounting_fixture,
                                             ifelse(is.na(signs$date_installed),"" , paste0("<br><b>Installed Date:</b> ", signs$date_installed))))
 
