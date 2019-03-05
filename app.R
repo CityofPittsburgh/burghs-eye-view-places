@@ -17,7 +17,6 @@ library(R4CouchDB)
 library(leaflet)
 library(DT)
 library(sp)
-library(geojsonio)
 library(rgdal)
 
 # Data Transform
@@ -97,7 +96,6 @@ getIds <- function(phrase) {
 # Facility Usage
 facility_usage <- toTitleCase(tolower(ckanUniques("fbb50b02-2879-47cd-abea-ae697ec05170", "type")$type))
 facility_usage <- sort(facility_usage[!is.na(facility_usage)])
-
 
 # Load Recreation Types
 court_types <- ckanUniques("a5b71bfa-840c-4c86-8f43-07a9ae854227", "type")$type
@@ -405,11 +403,15 @@ ui <- function(request) {
                                 multiple = TRUE,
                                 selectize = TRUE),
                     HTML('<font color="#85144b">'),
-                    checkboxInput("toggleHistoric",
-                                  label = "Historic Districts",
-                                  value = FALSE),
+                    checkboxInput("toggleDesignations",
+                                  label = "Designations"),
                     HTML('</font>'),
                     HTML('<font color="#a65628">'),
+                    selectInput("designation_select",
+                                label = NULL,
+                                c(`Designations` = '', c("Historic Districts", "Residential Parking Areas")),
+                                multiple = TRUE,
+                                selectize = TRUE),
                     checkboxInput("toggleEnvironmental",
                                   label = "Environmental",
                                   value = FALSE),
@@ -1034,6 +1036,21 @@ server <- shinyServer(function(input, output, session) {
     
     return(histdist)
   })
+  datParkingLoad <- reactive({
+    ppa <- readOGR("https://pghgis-pittsburghpa.opendata.arcgis.com/datasets/d5bd5650c83e43b898850756218352b6_0.geojson")
+    
+    return(ppa)
+  })
+  parkingInput <- reactive({
+    ppa <- datParkingLoad()
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      ppa <- histdist[apply(ppa@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(ppa)
+  })
   datEnviornmentalLoad <- reactive({
     # Load Flood Zones
     floodzones <- readOGR("https://opendata.arcgis.com/datasets/4ab4c0b4021547c79a9a6a875c1ae1be_0.geojson")
@@ -1651,7 +1668,7 @@ server <- shinyServer(function(input, output, session) {
                                            ifelse(waste$notes == "", "", paste("<br><b>Notes:</b>", waste$notes, "</font>"))))
         )
       }
-    }else {
+    } else {
       leafletProxy("map", session = session) %>%
         clearGroup("waste")
     }
@@ -1659,24 +1676,52 @@ server <- shinyServer(function(input, output, session) {
   })
   # Historic Regions
   observe({
-    if (input$toggleHistoric) {
-      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Historical Districts<center></div></font>')), type = "message", id = "histdistMessage", duration = NULL, closeButton = FALSE)
-      leafletProxy("map", session = session) %>%
-        clearGroup("hist")
+    if (input$toggleDesignations) {
       
-      histdist <- historicInput()
-      if (nrow(histdist) > 0) {
-        leafletProxy("map", session = session) %>%
-          addPolygons(data = histdist, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "hist",
-                      popup = ~(paste("<font color='black'><b>Historic District:</b>", histdist$name,
-                                      '</font>'))
-          )
-      }
-    } else {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Designations<center></div></font>')), type = "message", id = "designationMessage", duration = NULL, closeButton = FALSE)
       leafletProxy("map", session = session) %>%
-        clearGroup("hist")
+        clearGroup("hist") %>%
+        clearGroup("ppa")
+      if (is.null(input$designation_select)) {
+        histdist <- historicInput()
+        if (nrow(histdist) > 0) {
+          leafletProxy("map", session = session) %>%
+            addPolygons(data = histdist, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "hist",
+                        popup = ~(paste("<font color='black'><b>Historic District:</b>", histdist$name,
+                                        '</font>'))
+            )
+        }
+        ppa <- parkingInput()
+        if (nrow(ppa) > 0) {
+          leafletProxy("map", session = session) %>%
+            addPolygons(data = ppa, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "ppa",
+                        popup = ~(paste("<font color='black'><b>Parking Zone:</b>", ppa$code, '</font>'))
+            )
+        }
+      } else if (input$designation_select %in% "Historic Districts") {
+        histdist <- historicInput()
+        if (nrow(histdist) > 0) {
+          leafletProxy("map", session = session) %>%
+            addPolygons(data = histdist, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "hist",
+                        popup = ~(paste("<font color='black'><b>Historic District:</b>", histdist$name,
+                                        '</font>'))
+            )
+        }
+      } else if (input$designation_select %in% "Residential Parking Areas") {
+        ppa <- parkingInput()
+        if (nrow(ppa) > 0) {
+          leafletProxy("map", session = session) %>%
+            addPolygons(data = ppa, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "ppa",
+                        popup = ~(paste("<font color='black'><b>Parking Zone:</b>", ppa$code, '</font>'))
+                        )
+        }
+      } else {
+        leafletProxy("map", session = session) %>%
+          clearGroup("hist") %>%
+          clearGroup("ppa")
+      }
     }
-    removeNotification("histdistMessage")
+    removeNotification("designationMessage")
   })
   # Environmental Regions
   observe({
@@ -1847,7 +1892,7 @@ server <- shinyServer(function(input, output, session) {
       }
     }
     # Historic Districts
-    if (input$toggleHistoric) {
+    if (input$toggleDesignations) {
       histdist <- historicInput()
       if (nrow(histdist) > 0) {
         layersCount <- layersCount + 1
