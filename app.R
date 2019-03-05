@@ -1046,7 +1046,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      ppa <- histdist[apply(ppa@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      ppa <- ppa[apply(ppa@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(ppa)
@@ -1698,28 +1698,31 @@ server <- shinyServer(function(input, output, session) {
                         popup = ~(paste("<font color='black'><b>Parking Zone:</b>", ppa$code, '</font>'))
             )
         }
-      } else if (input$designation_select %in% "Historic Districts") {
-        histdist <- historicInput()
-        if (nrow(histdist) > 0) {
-          leafletProxy("map", session = session) %>%
-            addPolygons(data = histdist, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "hist",
-                        popup = ~(paste("<font color='black'><b>Historic District:</b>", histdist$name,
-                                        '</font>'))
-            )
-        }
-      } else if (input$designation_select %in% "Residential Parking Areas") {
-        ppa <- parkingInput()
-        if (nrow(ppa) > 0) {
-          leafletProxy("map", session = session) %>%
-            addPolygons(data = ppa, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "ppa",
-                        popup = ~(paste("<font color='black'><b>Parking Zone:</b>", ppa$code, '</font>'))
-                        )
-        }
       } else {
-        leafletProxy("map", session = session) %>%
-          clearGroup("hist") %>%
-          clearGroup("ppa")
-      }
+        if ("Historic Districts" %in% input$designation_select) {
+          histdist <- historicInput()
+          if (nrow(histdist) > 0) {
+            leafletProxy("map", session = session) %>%
+              addPolygons(data = histdist, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "hist",
+                          popup = ~(paste("<font color='black'><b>Historic District:</b>", histdist$name,
+                                          '</font>'))
+              )
+          }
+        }
+        if ("Residential Parking Areas" %in% input$designation_select) {
+          ppa <- parkingInput()
+          if (nrow(ppa) > 0) {
+            leafletProxy("map", session = session) %>%
+              addPolygons(data = ppa, color = "#85144b", fillColor = "#85144b", fillOpacity = .5, group = "ppa",
+                          popup = ~(paste("<font color='black'><b>Parking Zone:</b>", ppa$code, '</font>'))
+              )
+          }
+        }
+      } 
+    } else {
+      leafletProxy("map", session = session) %>%
+        clearGroup("hist") %>%
+        clearGroup("ppa")
     }
     removeNotification("designationMessage")
   })
@@ -1893,9 +1896,28 @@ server <- shinyServer(function(input, output, session) {
     }
     # Historic Districts
     if (input$toggleDesignations) {
-      histdist <- historicInput()
-      if (nrow(histdist) > 0) {
-        layersCount <- layersCount + 1
+      if (is.null(input$designation_select)) {
+        histdist <- historicInput()
+        if (nrow(histdist) > 0) {
+          layersCount <- layersCount + 1
+        }
+        ppa <- parkingInput()
+        if (nrow(ppa) > 0) {
+          layersCount <- layersCount + 1
+        }
+      } else {
+        if ("Historic Districts" %in% input$designation_select) {
+          histdist <- historicInput()
+          if (nrow(histdist) > 0) {
+            layersCount <- layersCount + 1
+          }
+          if ("Residential Parking Areas" %in% input$designation_select) {
+            ppa <- parkingInput()
+            if (nrow(ppa) > 0) {
+              layersCount <- layersCount + 1
+            }
+          }
+        }
       }
     }
     # Enviornmental Layers
