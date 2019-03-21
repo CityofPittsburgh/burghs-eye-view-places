@@ -1002,6 +1002,14 @@ server <- shinyServer(function(input, output, session) {
     playgrounds <- readOGR("http://wprdc.ogopendata.com/dataset/37e7a776-c98b-4e08-ad61-a8c8e23ec9ab/resource/12d59d62-e86d-4f37-af19-463050496ed6/download/playgroundsimg.geojson")
     playgrounds@data$layer <- "Playground"
     
+    counts <- ckanSQL("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20%22name%22,%22equipment_type%22,COUNT(%22id%22)%20FROM%20%22e39ef76e-0a11-47c8-a86f-a37f55db7a2b%22GROUP%20BY%20%22name%22,%22equipment_type%22") %>%
+      group_by(name) %>%
+      summarise(equip = paste0(count, " - ", equipment_type , collapse='<li>')) %>%
+      mutate(equip = paste0("<ul><li>", equip, "</ul>"))
+    
+    playgrounds@data <- playgrounds@data %>%
+      left_join(counts, by = "name")
+    
     return(playgrounds)
   })
   # Playgrounds Filter
@@ -1488,10 +1496,12 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(playgrounds) > 0) {
         leafletProxy("map", session = session) %>%
           addPolygons(data = playgrounds, color = "#4daf4a", fillColor = "#4daf4a", fillOpacity = .5, group = "recreation",
-                      popup = ~(paste(ifelse(playgrounds$image == "", "" ,paste0('<center><img id="imgPicture" src="', playgrounds$image, '" style="width:250px;"></center>')),
+                      popup = ~(paste(ifelse(playgrounds$image == "", "" , paste0('<center><img id="imgPicture" src="', playgrounds$image, '" style="width:250px;"></center>')),
                                       "<font color='black'><b>Name:</b>", playgrounds$name,
                                       "<br><b>Location:</b>", playgrounds$street,
-                                      "<br><b>Park:</b>", playgrounds$park, "</font>"))
+                                      "<br><b>Park:</b>", playgrounds$park, 
+                                      ifelse(is.na(playgrounds$equip), "", paste("<br><b>Equipment:</b>", equip)), 
+                                      "</font>"))
         )
       }
       # Court & Rinks
