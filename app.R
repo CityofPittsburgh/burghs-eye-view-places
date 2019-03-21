@@ -1370,11 +1370,33 @@ server <- shinyServer(function(input, output, session) {
   })
   # Build City Map
   output$map <- renderLeaflet({
-    leaflet() %>%
+    map <- leaflet() %>%
       setView(-79.9959, 40.4406, zoom = 12) %>% 
       addEasyButton(easyButton(
         icon="fa-crosshairs", title="Locate Me",
         onClick=JS("function(btn, map){ map.locate({setView: true}); }")))
+      if (isolate(input$basemap_select) == "mapStack") {
+        map <- addTiles(map, urlTemplate = "http://{s}.sm.mapstack.stamen.com/((terrain-background,$000[@30],$fff[hsl-saturation@80],$1b334b[hsl-color],mapbox-water[destination-in]),(watercolor,$fff[difference],$000000[hsl-color],mapbox-water[destination-out]),(terrain-background,$000[@40],$000000[hsl-color],mapbox-water[destination-out])[screen@60],(streets-and-labels,$fedd9a[hsl-color])[@50])/{z}/{x}/{y}.png", attribution = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>', options = providerTileOptions(noWrap = TRUE))
+      } else {
+        map <- addProviderTiles(map, isolate(input$basemap_select), options = providerTileOptions(noWrap = TRUE))
+      }
+    if (isolate(input$toggleFacilities)) {
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading City Facilities<center></div></font>')), type = "message", id = "cityMessage", duration = NULL, closeButton = FALSE)
+      facilities <- facilitiesInput()
+      if (nrow(facilities) > 0) {
+        leafletProxy("map", session = session) %>%
+          addPolygons(data = facilities, color = "#ff7f00", fillColor = "#ff7f00", fillOpacity = .5, group = "facilities",
+                      popup = ~(paste(ifelse(facilities$image == "", "", paste0('<center><img id="imgPicture" src="', facilities$image,'" style="width:250px;"></center>')),
+                                      "<font color='black'><b>Name:</b>", facilities$name,
+                                      "<br><b>Location:</b>", facilities$address,
+                                      "<br><b>Usage:</b>", facilities$usage,
+                                      "<br><b>Dept:</b>", facilities$primary_user,
+                                      facilities$url, "</font>"))
+          )
+      }
+      removeNotification("cityMessage")
+    }
+    map
   })
   observe({
     # Code for Pittsburgh Basemap
