@@ -102,7 +102,7 @@ court_types <- ckanUniques("a5b71bfa-840c-4c86-8f43-07a9ae854227", "type")$type
 
 field_usages <- ckanUniques("6af89346-b971-41d5-af09-49cfdb4dfe23", "field_usage")$field_usage
 
-# Park Types}
+# Park Types
 parks <- RETRY("GET", "https://services1.arcgis.com/YZCmUqbcsUpOKfj7/arcgis/rest/services/ParksOpenData/FeatureServer/0/query?where=final_cat+is+not+null&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelIntersects&resultType=none&distance=0.0&units=esriSRUnit_Meter&returnGeodetic=false&outFields=final_cat&returnGeometry=false&returnCentroid=false&multipatchOption=xyFootprint&applyVCSProjection=false&returnIdsOnly=false&returnUniqueIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnDistinctValues=false&returnZ=false&returnM=false&returnExceededLimitFeatures=false&sqlFormat=standard&f=pjson")
 parks_c <- content(parks, "text")
 park_df <- jsonlite::fromJSON(parks_c)
@@ -900,6 +900,11 @@ server <- shinyServer(function(input, output, session) {
   # Load Parks
   datLoadParks <- reactive({
     parks <- readOGR("https://opendata.arcgis.com/datasets/c39ca624271a4fe0afe7087a9ea805f9_0.geojson")
+
+    parks@data <- mutate(parks@data,
+                         image = paste0("https://tools.wprdc.org/images/pittsburgh/parks/", gsub(" ", "_", parks$updatepknm), ".jpg"),
+                         exist = sapply(image, function(x) url.exists(as.character(x))),
+                         image = ifelse(exist, image, NA))
     
     return(parks)
   })
@@ -1463,7 +1468,8 @@ server <- shinyServer(function(input, output, session) {
       if (nrow(parks) > 0) {
         leafletProxy("map", session = session) %>%
           addPolygons(data = parks, color = "#4daf4a", group = "recreation",
-                      popup = ~(paste("<font color='black'><b>Name:</b>", parks$updatepknm,
+                      popup = ~(paste(ifelse(is.na(parks$image), "", paste0('<center><img id="imgPicture" src="', parks$image,'" style="width:250px;"></center>')),
+                                      "<font color='black'><b>Name:</b>", parks$updatepknm,
                                       "<br><b>Type:</b>", parks$final_cat,
                                       ifelse(parks$maintenanceresponsibility == "", "", paste0("<br><b>Maintenance: </b>", parks$maintenanceresponsibility))))
         )
