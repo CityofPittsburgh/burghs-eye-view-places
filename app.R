@@ -27,6 +27,7 @@ library(lubridate)
 library(tools)
 library(stringi)
 library(tidyr)
+library(readr)
 
 # Turn off Scientific Notation
 options(scipen = 999)
@@ -642,55 +643,49 @@ server <- shinyServer(function(input, output, session) {
   })
   # Load CLP
   datLibsLoad <- reactive({
-    libs <- ckan("14babf3f-4932-4828-8b49-3c9a03bae6d0")
-    libs$full_address <- paste(libs$Address, paste0(libs$City, ","), libs$State, libs$Zip4)
-    # Clean Name Start
-    libs$Name <- tolower(libs$Name)
-    # Format Open/Close TImes
-    libs$MoOpen <- as.POSIXct(paste(Sys.Date(), as.character(libs$MoOpen)), format = "%Y-%m-%d %H:%M:%S")
-    libs$MoClose <- as.POSIXct(paste(Sys.Date(), as.character(libs$MoClose)), format = "%Y-%m-%d %H:%M:%S")
-    libs$TuOpen <- as.POSIXct(paste(Sys.Date(), as.character(libs$TuOpen)), format = "%Y-%m-%d %H:%M:%S")
-    libs$TuClose <- as.POSIXct(paste(Sys.Date(), as.character(libs$TuClose)), format = "%Y-%m-%d %H:%M:%S")
-    libs$WeOpen <- as.POSIXct(paste(Sys.Date(), as.character(libs$WeOpen)), format = "%Y-%m-%d %H:%M:%S")
-    libs$WeClose <- as.POSIXct(paste(Sys.Date(), as.character(libs$WeClose)), format = "%Y-%m-%d %H:%M:%S")
-    libs$ThOpen <- as.POSIXct(paste(Sys.Date(), as.character(libs$ThOpen)), format = "%Y-%m-%d %H:%M:%S")
-    libs$ThClose <- as.POSIXct(paste(Sys.Date(), as.character(libs$ThClose)), format = "%Y-%m-%d %H:%M:%S")
-    libs$FrOpen <- as.POSIXct(paste(Sys.Date(), as.character(libs$FrOpen)), format = "%Y-%m-%d %H:%M:%S")
-    libs$FrClose <- as.POSIXct(paste(Sys.Date(), as.character(libs$FrClose)), format = "%Y-%m-%d %H:%M:%S")
-    libs$SaOpen <- as.POSIXct(paste(Sys.Date(), as.character(libs$SaOpen)), format = "%Y-%m-%d %H:%M:%S")
-    libs$SaClose <- as.POSIXct(paste(Sys.Date(), as.character(libs$SaClose)), format = "%Y-%m-%d %H:%M:%S")
-    libs$SuOpen <- as.POSIXct(paste(Sys.Date(), as.character(libs$SuOpen)), format = "%Y-%m-%d %H:%M:%S")
-    libs$SuClose <- as.POSIXct(paste(Sys.Date(), as.character(libs$SuClose)), format = "%Y-%m-%d %H:%M:%S")
-    
-    # Format Open/Close Tooltips
-    libs$MoOpen_tt <-format(libs$MoOpen, "%I:%M %p")
-    libs$MoClose_tt <- format(libs$MoClose, "%I:%M %p")
-    libs$TuOpen_tt <-format(libs$TuOpen, "%I:%M %p")
-    libs$TuClose_tt <- format(libs$TuClose, "%I:%M %p")
-    libs$WeOpen_tt <-format(libs$WeOpen, "%I:%M %p")
-    libs$WeClose_tt <- format(libs$WeClose, "%I:%M %p")
-    libs$ThOpen_tt <-format(libs$ThOpen, "%I:%M %p")
-    libs$ThClose_tt <- format(libs$ThClose, "%I:%M %p")
-    libs$FrOpen_tt <-format(libs$FrOpen, "%I:%M %p")
-    libs$FrClose_tt <- format(libs$FrClose, "%I:%M %p")
-    libs$SaOpen_tt <- format(libs$SaOpen, "%I:%M %p")
-    libs$SaClose_tt <- format(libs$SaClose, "%I:%M %p")
-    libs$SuOpen_tt <- format(libs$SuOpen, "%I:%M %p")
-    libs$SuClose_tt <- format(libs$SuClose, "%I:%M %p")
-    
-    # Build URL Hyperlink
-    libs$url_name <- gsub("\\(", "", libs$Name) 
-    libs$url_name <- gsub("\\)", "", libs$url_name)
-    libs$url_name <- gsub("\\&", "and", libs$url_name)
-    libs$url_name <- gsub(" library", "", libs$url_name, ignore.case = T)
-    libs$url_name <- gsub(" ", "-", libs$url_name)
-    libs$url_name <- gsub("downtown-and-business", "downtown-business", libs$url_name)
-    libs$url_name <- paste0("https://www.carnegielibrary.org/clp_location/", libs$url_name, "/")
-    #Clean Name Finish
-    libs$Name <- toTitleCase(libs$Name)
-    libs$Name <- gsub(" Library", "", libs$Name)
-    libs$Name <- paste("CLP -", libs$Name)
-    
+    libs <- ckan("14babf3f-4932-4828-8b49-3c9a03bae6d0") %>%
+      mutate(full_address = paste(Address, paste0(City, ","), State, Zip4),
+             Name = tolower(Name),
+             url_name = gsub("\\(", "", Name),
+             url_name = gsub("\\)", "", url_name),
+             url_name = gsub("\\&", "and", url_name),
+             url_name = gsub(" library", "", url_name, ignore.case = T),
+             url_name = gsub(" ", "-", url_name),
+             url_name = gsub("downtown-and-business", "downtown-business", url_name),
+             url_name = paste0("https://www.carnegielibrary.org/clp_location/", url_name, "/"),
+             Name = gsub(" Library", "", Name),
+             Name = paste("CLP -", Name),
+             Name = toTitleCase(Name),
+             MoOpen = as.POSIXct(paste(Sys.Date(), as.character(MoOpen)), format = "%Y-%m-%d %H:%M:%S"),
+             MoClose = as.POSIXct(paste(Sys.Date(), as.character(MoClose)), format = "%Y-%m-%d %H:%M:%S"),
+             TuOpen = as.POSIXct(paste(Sys.Date(), as.character(TuOpen)), format = "%Y-%m-%d %H:%M:%S"),
+             TuClose = as.POSIXct(paste(Sys.Date(), as.character(TuClose)), format = "%Y-%m-%d %H:%M:%S"),
+             WeOpen = as.POSIXct(paste(Sys.Date(), as.character(WeOpen)), format = "%Y-%m-%d %H:%M:%S"),
+             WeClose = as.POSIXct(paste(Sys.Date(), as.character(WeClose)), format = "%Y-%m-%d %H:%M:%S"),
+             ThOpen = as.POSIXct(paste(Sys.Date(), as.character(ThOpen)), format = "%Y-%m-%d %H:%M:%S"),
+             ThClose = as.POSIXct(paste(Sys.Date(), as.character(ThClose)), format = "%Y-%m-%d %H:%M:%S"),
+             FrOpen = as.POSIXct(paste(Sys.Date(), as.character(FrOpen)), format = "%Y-%m-%d %H:%M:%S"),
+             FrClose = as.POSIXct(paste(Sys.Date(), as.character(FrClose)), format = "%Y-%m-%d %H:%M:%S"),
+             SaOpen = as.POSIXct(paste(Sys.Date(), as.character(SaOpen)), format = "%Y-%m-%d %H:%M:%S"),
+             SaClose = as.POSIXct(paste(Sys.Date(), as.character(SaClose)), format = "%Y-%m-%d %H:%M:%S"),
+             SuOpen = as.POSIXct(paste(Sys.Date(), as.character(SuOpen)), format = "%Y-%m-%d %H:%M:%S"),
+             SuClose = as.POSIXct(paste(Sys.Date(), as.character(SuClose)), format = "%Y-%m-%d %H:%M:%S"),
+             MoOpen_tt =format(MoOpen, "%I:%M %p"),
+             MoClose_tt = format(MoClose, "%I:%M %p"),
+             TuOpen_tt =format(TuOpen, "%I:%M %p"),
+             TuClose_tt = format(TuClose, "%I:%M %p"),
+             WeOpen_tt = format(WeOpen, "%I:%M %p"),
+             WeClose_tt = format(WeClose, "%I:%M %p"),
+             ThOpen_tt =format(ThOpen, "%I:%M %p"),
+             ThClose_tt = format(ThClose, "%I:%M %p"),
+             FrOpen_tt = format(FrOpen, "%I:%M %p"),
+             FrClose_tt = format(FrClose, "%I:%M %p"),
+             SaOpen_tt = format(SaOpen, "%I:%M %p"),
+             SaClose_tt = format(SaClose, "%I:%M %p"),
+             SuOpen_tt = format(SuOpen, "%I:%M %p"),
+             SuClose_tt = format(SuClose, "%I:%M %p"),
+             )
+
     return(libs)
   })
   # Carnegie Library of Pittsburgh Locations
