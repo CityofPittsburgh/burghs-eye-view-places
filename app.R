@@ -36,6 +36,7 @@ options(scipen = 999)
 couchdb_un <- jsonlite::fromJSON("key.json")$couchdb_un
 couchdb_pw <- jsonlite::fromJSON("key.json")$couchdb_pw
 couchdb_url <- jsonlite::fromJSON("key.json")$couchdb_url
+qalert <- jsonlite::fromJSON("key.json")$qalert
 
 # Function to read backslashes correctly
 chartr0 <- function(foo) chartr('\\','\\/',foo)
@@ -1347,7 +1348,7 @@ server <- shinyServer(function(input, output, session) {
       load.egg$icon <- "july_4"
       load.egg$tt <- "<i>Happy Independence Day! Looks like you need to try another search term.</i>"
     } else if (Sys.Date() >= as.Date(paste0(this_year,"-05-01")) & Sys.Date() <= as.Date(paste0(this_year,"-08-31"))) {
-      load.pools <- ckan("5cc254fe-2cbd-4912-9f44-2f95f0beea9a") %>%
+      load.egg <- ckan("5cc254fe-2cbd-4912-9f44-2f95f0beea9a") %>%
         rename(X = latitude,
                Y = longitude) %>%
         mutate(icon = "summer",
@@ -1360,6 +1361,7 @@ server <- shinyServer(function(input, output, session) {
       load.egg$icon <- "snow"
       load.egg$tt <- "Burrr!! The app's not frozen, there's just nothing that fits that description here!"
     }
+    
     return(load.egg)
   })
   # Build City Map
