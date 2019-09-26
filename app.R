@@ -11,7 +11,6 @@ library(shinythemes)
 #"Dogfooding" Packages
 library(httr)
 library(jsonlite)
-library(R4CouchDB)
 
 # Visuals Libraries
 library(leaflet)
@@ -33,10 +32,6 @@ library(readr)
 options(scipen = 999)
 
 #Keys
-couchdb_un <- jsonlite::fromJSON("key.json")$couchdb_un
-couchdb_pw <- jsonlite::fromJSON("key.json")$couchdb_pw
-couchdb_url <- jsonlite::fromJSON("key.json")$couchdb_url
-qalert <- jsonlite::fromJSON("key.json")$qalert
 
 # Function to read backslashes correctly
 chartr0 <- function(foo) chartr('\\','\\/',foo)
@@ -140,10 +135,6 @@ ft_select <- c(0, max_lngth)
 
 # Waste Material Types
 materials <- as.factor(c("Alkaline Batteries", "Automotive Batteries", "Cell Phones", "CFL Lightbulbs", "Clothing", "Collectibles", "Computers and Peripherals", "Construction and Demolition Waste", "Fluorescent Tube Lightbulbs", "Freon Appliances", "General Electronics", "Household Chemicals and Waste", "Household Recyclables", "Ink and Toner", "Motor Oil", "Plastic Bags and Films", "Prescription Medication", "Propane Tanks", "Rechargeable Batteries", "Scrap Metal", "Small Business Recyclables", "Tires", "TVs and Monitors", "Yard Debris"))
-
-# CouchDB Connection
-couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places")
-# couchDB <- cdbIni(serverName = couchdb_url, uname = couchdb_un, pwd = couchdb_pw, DBName = "burghs-eye-view-places-dev")
 
 # this_year
 this_year <- format(Sys.Date(), format="%Y")
@@ -1999,14 +1990,6 @@ server <- shinyServer(function(input, output, session) {
       # Clear old easter egg
       leafletProxy("map", session =session) %>%
         clearGroup("egg")
-    }
-    #Write inputs to Couch
-    if (url.exists(paste0(couchdb_url, ":5984/_utils/"))){
-      dateTime <- Sys.time()
-      names(dateTime) <- "dateTime"
-      inputs <- isolate(reactiveValuesToList(input))
-      couchDB$dataList <- c(inputs, sessionID, dateTime, sessionStart)
-      cdbAddDoc(couchDB)
     }
   })
 })
