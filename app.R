@@ -31,8 +31,6 @@ library(readr)
 # Turn off Scientific Notation
 options(scipen = 999)
 
-#Keys
-
 # Function to read backslashes correctly
 chartr0 <- function(foo) chartr('\\','\\/',foo)
 
