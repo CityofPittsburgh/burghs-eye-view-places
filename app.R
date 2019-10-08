@@ -555,7 +555,7 @@ server <- shinyServer(function(input, output, session) {
   # Load Signalized Intersections
   datSiLoad <- reactive({
     # Load Signalized Intersections
-    si <- readOGR("http://data.wprdc.org/dataset/f470a3d5-f5cb-4209-93a6-c974f7d5a0a4/resource/82ce557f-2388-489f-87e0-0d9d052633c4/download/siimg.geojson")
+    si <- ckan("79ddcc74-33d2-4735-9b95-4169c7d0413d")
     # Clean
     si$description <- gsub("_", " ", si$description)
     si$description <- toTitleCase(tolower(si$description))
@@ -584,7 +584,7 @@ server <- shinyServer(function(input, output, session) {
     
     # Search Filter
     if (!is.null(input$search) & input$search != "") {
-      si <- si[apply(si@data, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+      si <- si[apply(si, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
     }
     
     return(si)
@@ -1217,7 +1217,7 @@ server <- shinyServer(function(input, output, session) {
     } else if (input$report_select == "Traffic Signals") {
       si <- siInput()
 
-      si <- select(si@data, c(description, operation_type, flash_time, flash_yellow))
+      si <- select(si, c(description, operation_type, flash_time, flash_yellow))
       colnames(si) <- c("Location", "Operation Type", "Flash Time", "Flash Yellow")
       
       report <- si
@@ -1807,7 +1807,7 @@ server <- shinyServer(function(input, output, session) {
       si <- siInput()
       if (nrow(si) > 0) {
         leafletProxy("map", session = session) %>%
-          addCircleMarkers(data = si, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2, group = "intersections",
+          addCircleMarkers(data = si, lng = ~longitude, lat = ~latitude, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, radius = 2, group = "intersections",
                            popup = ~(paste("<font color='black'><b>Location:</b>", si$description,
                                            ifelse(is.na(si$operation_type), "", paste("<br><b>Operation Type:</b>", si$operation_type)),
                                            ifelse(is.na(si$flash_time), "", paste("<br><b>Flash Time:</b>", si$flash_time)),
