@@ -120,7 +120,9 @@ si_type <- ckanUniques("79ddcc74-33d2-4735-9b95-4169c7d0413d", "operation_type")
 si_type <- paste("Traffic Signal -", si_type)
 si_type <- ifelse(si_type == "Traffic Signal - NA", "Traffic Signal - Other", si_type)
 
-intersection_type <- levels(as.factor(c(mark_type, si_type)))
+
+# Make Traffic Selection
+traffic_type <- levels(as.factor(c(mark_type, si_type, "Speed Hump")))
 
 # Street Sign Types
 sign_types <- sort(ckanUniques("d078a6b5-83a3-4723-a3a9-5371cfe1cc0c", "description")$description)
@@ -423,12 +425,12 @@ ui <- function(request) {
                                 selectize = TRUE),
                     HTML('<font color="#e41a1c">'),
                     checkboxInput("toggleIntersections",
-                                  label = "Intersections",
+                                  label = "Traffic",
                                   value = FALSE),
                     HTML('</font>'),
                     selectInput("intersection_select",
                                 label = NULL,
-                                c(`Intersection Type` ='', intersection_type),
+                                c(`Traffic Type` ='', traffic_type),
                                 multiple = TRUE,
                                 selectize = TRUE),
                     selectInput("flash_select",
@@ -450,7 +452,7 @@ ui <- function(request) {
                           inputPanel(
                             selectInput("report_select", 
                                         tagList(shiny::icon("map-marker"), "Select Layer:"),
-                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Facilities", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Pavement Markings", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Street Signs", "Waste Recovery Sites", "Water Features"), #
+                                        choices = c("Carnegie Library of Pittsburgh Locations", "City Facilities", "City Bridges", "City Steps", "City Parks", "City Retaining Walls", "Courts & Rinks", "Pavement Markings", "Paving Schedule","Playgrounds", "Playing Fields", "Pools & Spray Parks", "Recreation Facilities", "Traffic Signals", "Street Signs", "Speed Humps", "Waste Recovery Sites", "Water Features"), #
                                         selected= "City Facilities"),
                             # Define Button Position
                             uiOutput("buttonStyle")
@@ -607,6 +609,24 @@ server <- shinyServer(function(input, output, session) {
     }
     
     return(signs)
+  })
+  # Load Speed Hump
+  loadHumps <- reactive({
+    # Call WPRDC for Humps Dataset
+    humps <- ckan("37b2ac41-ae8e-4de1-8405-157e05dc3640") %>%
+      mutate(address = case_when(is.na(locator_address_number) ~ locator_street,
+                                 TRUE ~ paste(locator_address_number, locator_street)))
+  })
+  # Speed Hump with Filters
+  humpsInput <- reactive({
+    humps <- loadHumps()
+    
+    # Search Filter
+    if (!is.null(input$search) & input$search != "") {
+      humps <- humps[apply(humps, 1, function(row){any(grepl(input$search, row, ignore.case = TRUE))}), ]
+    }
+    
+    return(humps)
   })
   # Load Markings
   loadCwLoad <- reactive({
@@ -1201,6 +1221,13 @@ server <- shinyServer(function(input, output, session) {
       colnames(si) <- c("Location", "Operation Type", "Flash Time", "Flash Yellow")
       
       report <- si
+    } else if (input$report_select == "Speed Humps"){
+      humps <- humpsInput()
+      
+      humps <- select(humps, c(id, locator_address_number, locator_street, speed_hump_material, pavement))
+      colnames(humps) <- c("ID", "Address", "Street", "Material", "Pavement")
+      
+      report <- humps
     } else if (input$report_select == "Pavement Markings"){
       mark <- markInput()
       
@@ -1770,12 +1797,12 @@ server <- shinyServer(function(input, output, session) {
     }
     removeNotification("environMessage")
   })
-  # Traffic Signals
+  # Traffic Types
   observe({
     if (input$toggleIntersections) {
       leafletProxy("map", session = session) %>%
         clearGroup("intersections")
-      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Intersection Data<center></div></font>')), type = "message", id = "interMessage", duration = NULL, closeButton = FALSE)
+      showNotification(HTML(paste0('<center><font color = "white"><div class="loading">Loading Traffic Data<center></div></font>')), type = "message", id = "interMessage", duration = NULL, closeButton = FALSE)
 
       si <- siInput()
       if (nrow(si) > 0) {
@@ -1795,6 +1822,14 @@ server <- shinyServer(function(input, output, session) {
                        popup = ~(paste("<font color='black'><b>Type:</b>", mark$type,
                                        "<br><b>Location:</b>", mark$street, "</font>"))
         )
+      }
+      # Speed Humps
+      if ("Speed Hump" %in% input$intersection_select) {
+        humps <- humpsInput()
+        leafletProxy("map", session = session) %>%
+          addCircleMarkers(data = humps, lng = ~longitude, lat = ~latitude, color = "#e41a1c", fillColor = "#e41a1c", fillOpacity = .5, group = "intersections", radius = 2,
+                           popup = ~(paste("<font color='black'><b>Type:</b> Speed Hump",
+                                           "<br><b>Location:</b>", humps$address, "</font>")))
       }
     } else {
       leafletProxy("map", session = session) %>%
