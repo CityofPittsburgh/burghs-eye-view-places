@@ -27,6 +27,7 @@ library(tools)
 library(stringi)
 library(tidyr)
 library(readr)
+library(RCurl)
 
 # Turn off Scientific Notation
 options(scipen = 999)
