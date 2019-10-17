@@ -191,7 +191,7 @@ ui <- function(request) {
                           # Run script to determine if user is loading from a mobile device
                           tags$script(getWidth),
                           # Google Tag Manager Script to Head
-                          tags$head(includeScript("tag-manager-head.js")),
+                          tags$head(includeScript("www/tag-manager-head.js")),
                           # Set favicon
                           tags$head(tags$link(rel = "icon", type = "image/png", href="favicon.png")),
                           tags$head(HTML('<link rel="apple-touch-icon-precomposed" href="apple-touch-icon-precomposed.png" />
@@ -206,7 +206,7 @@ ui <- function(request) {
                                          <meta property="og:description"   content="Pittsburgh&#39;s one stop shop for geographic City Data" />
                                          <meta property="og:image"         content="http://apps.pittsburghpa.gov/cis/burgh-seye-icon.png" />')),
                           # Add Google Analytics Script to page
-                          tags$head(includeScript("google-analytics.js")),
+                          tags$head(includeScript("https://www.google-analytics.com/analytics.js")),
                           # Add Tag Manager Script to Body
                           tags$body(tags$noscript(tags$iframe(src='https://www.googletagmanager.com/ns.html?id=GTM-TCTCQVD', height = 0, width = 0, style="display:none;visibility:hidden"))),
                           # Layout CSS
