@@ -16,7 +16,7 @@ library(jsonlite)
 library(leaflet)
 library(DT)
 library(sp)
-library(rgdal)
+suppressMessages(library(rgdal))
 
 # Data Transform
 library(plyr)
@@ -905,7 +905,9 @@ server <- shinyServer(function(input, output, session) {
   # Load Parks
   datLoadParks <- reactive({
     parks <- readOGR("https://opendata.arcgis.com/datasets/c39ca624271a4fe0afe7087a9ea805f9_0.geojson")
-
+    #delete parks without maintenance responsibility
+    parks <- subset(parks, !is.na(maintenanceresponsibility) & maintenanceresponsibility != "")
+    
     parks@data <- mutate(parks@data,
                          image = paste0("https://tools.wprdc.org/images/pittsburgh/parks/", gsub(" ", "_", parks$updatepknm), ".jpg"),
                          exist = sapply(image, function(x) url.exists(as.character(x))),
